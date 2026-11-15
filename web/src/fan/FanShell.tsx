@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigationType } from 'react-router-dom'
 import logo from '../assets/brand/faze-logo-on-dark.png'
 import { AccountMenu } from '../components/ui/AccountMenu'
 import { Icon } from '../components/ui/Icon'
@@ -35,6 +35,13 @@ export function FanShell({ account, signInVisible, extraLinks, children }: {
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
+  const { pathname, hash } = useLocation()
+  const navigation = useNavigationType()
+
+  // A new page starts at the top. Back/Forward keep the browser's position, and a #hash link scrolls itself.
+  useEffect(() => {
+    if (navigation !== 'POP' && !hash) window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [pathname, hash, navigation])
 
   useEffect(() => {
     if (!open) return

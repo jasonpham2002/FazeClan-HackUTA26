@@ -45,7 +45,12 @@ export function RosterBadge({ status }: { status: RosterStatus }) {
 export function PlayerPortrait({ player, className = '' }: { player: Player; className?: string }) {
   const [failed, setFailed] = useState(false)
   if (player.imageUrl && !failed) {
-    return <img src={player.imageUrl} alt={player.handle} loading="lazy" onError={() => setFailed(true)} className={`bg-surface-2 object-cover object-top ${className}`} />
+    // Cut-outs sit on the same lit camo backdrop as the placeholder, feet at the bottom edge.
+    return (
+      <div className={`fz-photo-bg relative isolate overflow-hidden ${className}`}>
+        <img src={player.imageUrl} alt={player.handle} loading="lazy" onError={() => setFailed(true)} className="absolute inset-x-0 bottom-0 h-[92%] w-full object-contain object-bottom brightness-110 contrast-105" />
+      </div>
+    )
   }
   // Placeholder players carry a number; a real player gets the first letter of their tag, never invented artwork.
   const clean = player.handle.replace(/[^A-Za-z0-9]/g, '')

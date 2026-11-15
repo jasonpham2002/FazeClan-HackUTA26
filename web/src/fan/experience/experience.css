@@ -423,3 +423,16 @@
 
 .xp-figure.has-photo img { object-position: 50% 12%; }
 
+
+/* Cut-outs stand on the stage instead of sitting in a frame. */
+.xp-figure.has-photo { border-radius: 0; overflow: visible; }
+.xp-figure.has-photo::after { display: none; }
+.xp-figure.has-photo img { object-fit: contain; object-position: 50% 100%; }
+
+
+/* Real cut-outs are roughly square: give them a matching, larger slot so the players read at full size. */
+.xp-player:has(.has-photo) { width: clamp(11rem, 19vw, 18rem); margin-left: calc(clamp(11rem, 19vw, 18rem) / -2); }
+.xp-figure.has-photo { aspect-ratio: 20 / 21; }
+@media (max-width: 47.99rem) {
+  .xp-player:has(.has-photo) { width: 58vw; margin: 0; }
+}

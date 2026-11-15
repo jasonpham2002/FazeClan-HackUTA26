@@ -208,6 +208,24 @@
   .fz-roster-card .fz-card-cta { opacity: 1; transform: none; }
 }
 
+/* ---------- Player photo backdrop (HLTV-style) ---------- */
+
+/* Dark slate with angled light streaks and red glows, like a broadcast player card. */
+.fz-photo-bg {
+  background-color: #1b1e25;
+  background-image:
+    /* thin diagonal light streaks */
+    repeating-linear-gradient(118deg, transparent 0 34px, rgb(255 255 255 / 0.035) 34px 36px, transparent 36px 78px),
+    /* broad angled red band sweeping up from the bottom right */
+    linear-gradient(118deg, transparent 52%, rgb(228 0 43 / 0.32) 68%, rgb(228 0 43 / 0.12) 80%, transparent 92%),
+    /* second, fainter band from the left */
+    linear-gradient(62deg, transparent 58%, rgb(228 0 43 / 0.18) 74%, transparent 88%),
+    /* red glow pooling at the bottom */
+    radial-gradient(110% 55% at 50% 105%, rgb(160 10 35 / 0.75), transparent 70%),
+    /* slight lift at the top */
+    linear-gradient(180deg, #252a33 0%, #1b1e25 55%);
+}
+
 /* ---------- Player hero ---------- */
 
 .fz-hero {

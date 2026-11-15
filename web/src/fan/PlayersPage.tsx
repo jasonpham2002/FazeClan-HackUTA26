@@ -16,7 +16,7 @@ function PlayerCard({ player, index, following }: { player: Player; index: numbe
         <div className="fz-portrait-wrap">
           <PlayerPortrait player={player} className="aspect-[3/4] w-full" />
         </div>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
         <span aria-hidden="true" className="fz-card-index figure absolute top-3 left-4 text-lg text-white/55">
           {String(index + 1).padStart(2, '0')}
         </span>
@@ -93,7 +93,7 @@ export function PlayersPage({ embedded = false }: { embedded?: boolean }) {
           {list.some(isUnverified) && (
             <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
               <SampleBadge label={PREVIEW_LABEL} />
-              Names only for now. Roles, photos, statistics and highlights appear once they are verified.
+              Roles, statistics and highlights here are demo or placeholder content until the team’s verified data arrives.
             </p>
           )}
           {sample && (

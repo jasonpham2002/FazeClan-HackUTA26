@@ -24,3 +24,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Private test portraits (third-party copyright, not cleared for publishing). Never commit.
+public/players/private/
