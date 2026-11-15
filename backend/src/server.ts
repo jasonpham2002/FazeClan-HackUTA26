@@ -1,3 +1,4 @@
+import { releaseId } from './release.ts'
 import { registerCalendarRoutes } from './esports-calendar.ts'
 import { pathToFileURL } from 'node:url'
 import cors from '@fastify/cors'
@@ -63,7 +64,7 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
       ]) AS required(name)`,
     ).catch(() => fail(503, 'DATABASE_UNAVAILABLE', 'The database is unavailable.'))
     if (!schema.ready) fail(503, 'SCHEMA_NOT_READY', 'Run the backend migrations before using this API.')
-    return { status: 'ok', apiVersion: 'faze-id-v1', capabilities: ['players', 'predictions', 'points', 'rewards'] }
+    return { status: 'ok', releaseId, apiVersion: 'faze-id-v1', capabilities: ['players', 'predictions', 'points', 'rewards'] }
   })
   const auth = registerAuth(app, db, config, sendMail)
   registerPlayerRoutes(app, db)
