@@ -96,3 +96,19 @@ npm run verify:site -- http://manilovefaze.club
 This checks domain page routes, API prefix stripping, auth prefix preservation, and stale IP references in the built JavaScript. It is read-only and does not request or expose email tokens. It is not a substitute for opening a newly requested magic link: old links retain the old callback/base URL. Use the domain consistently in the same browser, then verify `/api/me` returns the signed-in user and refreshing `/profile` preserves the session.
 
 At the time of diagnosis HTTPS on port 443 was unavailable. These examples therefore match the currently working HTTP origin. If TLS is enabled, update both public URLs/origins to HTTPS and apply the route rules to the TLS server block as well.
+
+## Automatic pull script
+
+[The replacement deployment script](scripts/deploy-main.sh) updates the existing checkout at `/opt/FazeClan-HackUTA26`. Unlike a Git-HEAD-only check, it records the last **successfully deployed** commit in `/var/lib/faze-deploy/successful-commit`. A build failure after pulling is retried on the next invocation. A file lock prevents overlapping jobs. The script installs/checks/migrates the backend, builds the frontend explicitly for `/api`, restarts both services, and verifies the API and public routing before marking success.
+
+Before installing it, identify the real backend service name. `faze-web` is known from the original script; do not invent a second backend service. Keep the deployed backend `.env`, secrets and schema. The API's `PUBLIC_BASE_URL` and `APP_ORIGINS` must already match the public domain, and the existing proxy must implement the route rules above. The script does not edit Nginx or overwrite configuration/secrets.
+
+On Vultr, run with the actual service name substituted:
+
+```sh
+sudo env FAZE_API_SERVICE=ACTUAL_API_SERVICE bash /opt/FazeClan-HackUTA26/backend/scripts/deploy-main.sh
+```
+
+If a separate worker service exists, also supply `FAZE_WORKER_SERVICE=ACTUAL_WORKER_SERVICE`. The existing timer/cron job must invoke this replacement with those variables; merely committing it does not replace the installed script. Preserve the original schedule, and inspect `sudo tail -n 100 /var/log/faze-pull.log` for the final `successfully deployed` message or failing step. Run it once manually to initialize the success marker and catch configuration errors before relying on the schedule.
+
+This assumes `faze-web` serves the checkout's newly built `web/dist/`, either directly or through its existing upstream. If it serves a separate publication directory, add the existing publish step before restarting `faze-web`. A frontend process restart does not change an Nginx root pointing elsewhere. No sample data is automatically seeded; use the documented import/seed commands deliberately when needed.
