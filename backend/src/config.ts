@@ -16,6 +16,22 @@ function portNumber(value: string | undefined, fallback: number): number {
   return port
 }
 
+export function listenHost(): string {
+  const host = process.env.LISTEN_HOST?.trim() || '127.0.0.1'
+  if (!/^[A-Za-z0-9.:-]+$/.test(host)) throw new Error('Invalid listen host')
+  return host
+}
+
+function publicBaseUrl(port: number): string {
+  const configured = process.env.PUBLIC_BASE_URL?.trim()
+  if (!configured) return `http://127.0.0.1:${port}`
+  const url = URL.parse(configured)
+  if (!url || !['http:', 'https:'].includes(url.protocol) || !url.hostname) {
+    throw new Error('PUBLIC_BASE_URL must be an http(s) URL')
+  }
+  return configured.replace(/\/$/, '')
+}
+
 export function loadConfig(): Config {
   const { DATABASE_URL, BETTER_AUTH_SECRET, AGENT_INGEST_TOKEN } = process.env
   if (!DATABASE_URL) throw new Error('DATABASE_URL is required')
@@ -27,7 +43,7 @@ export function loadConfig(): Config {
   return {
     databaseUrl: DATABASE_URL,
     schema: process.env.DB_SCHEMA ?? 'faze',
-    baseUrl: `http://127.0.0.1:${port}`,
+    baseUrl: publicBaseUrl(port),
     port,
     origins: (process.env.APP_ORIGINS ?? 'http://127.0.0.1:3000,http://127.0.0.1:3002,http://127.0.0.1:5189').split(',').map(origin => origin.trim()),
     authSecret: BETTER_AUTH_SECRET,

@@ -1,6 +1,6 @@
 # FazeClan-HackUTA26
 
-Independent FaZe Clan concept: an event application platform with an editable AI FaceTime interview and human-reviewed invitations.
+FaZe ID: a connected CS2 fan platform with sourced player analytics, YouTube highlights, free predictions, points, proposed rewards, and AI interviews for limited-access events.
 
 ## Connected demo — start here
 
@@ -34,29 +34,36 @@ Open http://127.0.0.1:5189 for fans and http://127.0.0.1:5189/admin for staff. T
 
 The earlier standalone [frontend/](frontend/README.md) is preserved for reference. Its separate demo store does not sync with the connected app. Use `web/` for team integration and confirm its [shared API contracts](web/INTEGRATION.md) with Jason.
 
-## Team assignments
+## Team assignments ? current 10-hour sprint
+
+**No SerpAPI.** Current roster, CS2 statistics, matches and tournament facts are manually collected from identified sources and imported into PostgreSQL. AI explains those stored facts; numerical statistics are never invented. Data is current as of its displayed import/check timestamp, not a real-time telemetry feed.
 
 | Owner | Scope | Detailed plan |
 |---|---|---|
-| Johnny | Fan signup, event applications, call readiness and invitation acceptance | [Minh.md](Minh.md) |
-| Jason | Backend, database, authentication, call orchestration and Vultr deployment | [Jason.md](Jason.md) |
-| Minh + Tuong | Muse integration, AI host, call experience, transcripts and structured answers | [Johnny.md](Johnny.md) |
-| Khoi | Staff dashboard, editable questions, application review and analytics | [Khoi.md](Khoi.md) |
+| Johnny | Manual roster/stat/match imports, provenance, validation and player-data APIs | [Minh.md](Minh.md) |
+| Jason | Predictions, settlement, points ledger, rewards, verified engagement and event eligibility | [Jason.md](Jason.md) |
+| Khoi | All fan and staff frontend: player pages, schedule, highlights, predictions, points, rewards and event review | [Khoi.md](Khoi.md) |
+| Minh | YouTube API, analytical AI provider, source-grounded insights, existing AI interview; Tuong supports calls | [Johnny.md](Johnny.md) |
 
-Each assignment includes shared contracts, implementation steps, dependencies, a 24-hour schedule and acceptance checks. The fan and staff frontend is connected in [web/](web/README.md); the [local backend](backend/README.md) provides database-backed sign-in, review, and sample interviews. Minh and Tuong own the Muse integration.
+Johnny and Minh's filenames remain swapped as requested earlier. Each document's heading identifies the actual owner. All four include implementation steps, proposed contracts, dependencies, a ten-hour schedule, acceptance criteria and scope limits.
+
+Muse Spark is a candidate analytical provider; Minh verifies actual API access and capabilities before committing the implementation. Player pages display analytics first, then matches/calendar/tournament activity, then videos. Coach and non-active roster statuses are presented appropriately.
 
 ## Shared demo journey
 
-Staff publishes event questions → fan signs up and applies → fan requests an AI FaceTime interview → answers and transcript reach the dashboard → staff invites or waitlists → fan accepts an invitation.
+Choose a current CS2 player ? inspect sourced stats and AI explanation ? follow a match ? submit a free prediction ? staff confirms the result ? receive a persisted points award ? redeem a sample proposed reward or apply for an eligible exclusive event ? AI interview ? staff invitation.
 
-## First milestones
+Points unlock eligibility for selected experiences; applying or taking the interview does not deduct points. Merchandise, raffle-entry, priority and early-access benefits are proposed for the pitch, not fulfilled FaZe commitments. A content QR claim is a content check-in; event attendance requires an actual confirmed check-in.
 
-1. Agree API contracts, database choice, shared styling and responsibility boundaries in the first hour.
-2. Prove a real FaceTime audio/video call within two hours. If managed outbound is unavailable, label the operator-assisted fallback explicitly.
-3. Complete the application-to-call-to-review flow by hour ten.
-4. Freeze features for the final rehearsal and pitch preparation.
+## Sprint milestones
 
-Use Jason's assignment for API and persistence coordination, Minh and Tuong's for the agent/result contract, and the linked frontend assignments for the two user journeys.
+1. Hour 0?1: agree contracts/IDs, migration ownership, data sources, point rules and one demo player/market/reward/event.
+2. Hours 1?3: make real sourced stats, YouTube results, first AI insight and backend prediction/ledger paths available to Khoi.
+3. Hours 3?7: connect player UI, predictions, staff settlement, points, one redemption and the existing exclusive-event interview flow.
+4. Hours 7?8: test the complete fan/staff loop, duplicate requests, eligibility and provider failures.
+5. Hours 8?10: freeze scope, run checks, deploy within the agreed target and rehearse.
+
+Use the existing shared app and real backend. Coordinate additive migrations and central route registration with Jason; do not overwrite applied migrations or duplicate the app/database. Show honest unavailable states when sources/providers fail.
 
 ## Earlier standalone fan frontend (reference)
 
@@ -64,7 +71,7 @@ Run from the repository root (or `python3 frontend/serve.py` on macOS):
 
     python frontend/serve.py
 
-Open http://127.0.0.1:5187. Default mode is an explicitly labeled in-memory simulation, not a real account or phone call. See [frontend setup and backend handoff](frontend/README.md). Johnny and Khoi build the platform; Jason owns its backend. Minh and Tuong build the AI call feature.
+Open http://127.0.0.1:5187. Default mode is an explicitly labeled in-memory simulation, not a real account or phone call. See [frontend setup and backend handoff](frontend/README.md). This older standalone prototype is reference-only. Current ownership is in the assignment table above.
 
 ## Fan profile and history
 
