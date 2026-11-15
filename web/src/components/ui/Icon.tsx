@@ -1,0 +1,32 @@
+/** One small stroke-icon set so every screen uses the same weight and size. */
+const paths = {
+  arrowLeft: 'M19 12H5m6-6-6 6 6 6',
+  arrowUp: 'M12 19V5m-6 6 6-6 6 6',
+  arrowDown: 'M12 5v14m-6-6 6 6 6-6',
+  arrowRight: 'M5 12h14m-6-6 6 6-6 6',
+  plus: 'M12 5v14M5 12h14',
+  trash: 'M4 7h16M10 11v6m4-6v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3',
+  check: 'm5 12.5 4.5 4.5L19 7.5',
+  alert: 'M12 8v5m0 3.5v.01M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0Z',
+  info: 'M12 11v6m0-9.5v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  chevronDown: 'm6 9 6 6 6-6',
+} as const
+
+export type IconName = keyof typeof paths
+
+export function Icon({ name, className = 'size-4' }: { name: IconName; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={`shrink-0 ${className}`}
+    >
+      <path d={paths[name]} />
+    </svg>
+  )
+}
