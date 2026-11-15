@@ -46,7 +46,7 @@ export function registerFanRoutes(app: FastifyInstance, db: Pool, auth: Auth) {
   })
 
   app.get('/me/applications', async request => {
-    const user = await auth.requireUser(request, 'fan')
+    const user = await auth.requireUser(request)
     const { rows } = await db.query(`
       SELECT ${applicationColumns}, e.title AS "eventTitle"
       FROM applications a JOIN events e ON e.id=a.event_id

@@ -17,7 +17,7 @@ const eventInput = z.strictObject({
     try { new Intl.DateTimeFormat('en', { timeZone: value }); return true }
     catch { return false }
   }).optional(),
-  capacity: z.number().int().min(0).max(100_000),
+  capacity: z.number().int().min(1).max(100_000),
   status: z.enum(['draft', 'published']).optional(),
 })
 
@@ -52,16 +52,46 @@ const decisionInput = z.strictObject({
   reason: z.string().trim().max(1000).optional(),
 })
 
+const defaultDraft = {
+  intro: 'Thanks for applying! I am an AI host and I have a few quick questions for you.',
+  tone: 'friendly and casual',
+  maxDurationSeconds: 180,
+  questions: [
+    { id: 'q_1', prompt: 'What FaZe content have you enjoyed recently?', purpose: 'Understand interests', required: true, order: 1, maxFollowUps: 1 },
+    { id: 'q_2', prompt: 'What made you want to attend this event?', purpose: 'Understand motivation', required: true, order: 2, maxFollowUps: 1 },
+    { id: 'q_3', prompt: 'What would you be most excited to do there?', purpose: 'Understand expectations', required: true, order: 3, maxFollowUps: 1 },
+    { id: 'q_4', prompt: 'Have you joined a FaZe event or community activity before?', purpose: 'Learn about past participation; being new is fine', required: false, order: 4, maxFollowUps: 1 },
+  ],
+}
+
 function validateDeadline(deadline: string | Date, startsAt: string | Date) {
   if (new Date(deadline).getTime() > new Date(startsAt).getTime()) {
     fail(400, 'INVALID_EVENT_DATES', 'The application deadline must be on or before the event starts.')
   }
 }
 
+async function publishVersionFromDraft(client: Database, eventId: string, rawDraft: unknown) {
+  const draft = draftInput.parse(rawDraft)
+  draft.questions.sort((a, b) => a.order - b.order)
+  const versionId = randomUUID()
+  // The version insert seals its questions. The question FK is checked at commit.
+  await client.query(`
+    INSERT INTO questions (id,version_id,prompt,purpose,position,required,max_follow_ups)
+    SELECT q.id,$1,q.prompt,q.purpose,q."order",q.required,q."maxFollowUps"
+    FROM jsonb_to_recordset($2) AS q(id text,prompt text,purpose text,"order" int,required boolean,"maxFollowUps" int)
+  `, [versionId, JSON.stringify(draft.questions)])
+  const { rows: [published] } = await client.query(`
+    INSERT INTO interview_versions (id,event_id,version,intro,tone,max_duration_seconds)
+    SELECT $1,$2,COALESCE(max(version),0)+1,$3,$4,$5 FROM interview_versions WHERE event_id=$2
+    RETURNING id,version,published_at AS "publishedAt"
+  `, [versionId, eventId, draft.intro, draft.tone, draft.maxDurationSeconds])
+  return published
+}
+
 async function getInterviewDraft(db: Database, id: string) {
   const { rows: [interview] } = await db.query(`
-    SELECT e.draft,e.updated_at AS "draftUpdatedAt", latest.meta AS "publishedVersion",
-      e.draft IS NOT NULL AND e.draft IS DISTINCT FROM latest.config AS "hasUnpublishedChanges"
+    SELECT COALESCE(e.draft, $2::jsonb) AS draft, e.updated_at AS "draftUpdatedAt", latest.meta AS "publishedVersion",
+      COALESCE(e.draft, $2::jsonb) IS DISTINCT FROM latest.config AS "hasUnpublishedChanges"
     FROM events e LEFT JOIN LATERAL (
       SELECT json_build_object('id',v.id,'version',v.version,'publishedAt',v.published_at) AS meta,
         jsonb_build_object('intro',v.intro,'tone',v.tone,'maxDurationSeconds',v.max_duration_seconds,'questions',
@@ -70,7 +100,7 @@ async function getInterviewDraft(db: Database, id: string) {
            FROM questions q WHERE q.version_id=v.id)) AS config
       FROM interview_versions v WHERE v.event_id=e.id ORDER BY v.version DESC LIMIT 1
     ) latest ON true WHERE e.id=$1
-  `, [id])
+  `, [id, JSON.stringify(defaultDraft)])
   if (!interview) fail(404, 'EVENT_NOT_FOUND', 'Event not found.')
   return interview
 }
@@ -91,11 +121,18 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
     await auth.requireUser(request, 'staff')
     const body = eventInput.parse(request.body)
     validateDeadline(body.deadline, body.startsAt)
-    const { rows: [event] } = await db.query(`
-      INSERT INTO events (title,description,location,starts_at,deadline,capacity,status,timezone) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-      RETURNING id
-    `, [body.title, body.description, body.location, body.startsAt, body.deadline, body.capacity, body.status ?? 'draft', body.timezone ?? 'America/Chicago'])
-    return reply.code(201).send(await getEvent(db, event.id, undefined, true))
+    const status = body.status ?? 'draft'
+    const created = await transaction(db, async client => {
+      const { rows: [event] } = await client.query(`
+        INSERT INTO events (title,description,location,starts_at,deadline,capacity,status,timezone,draft) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        RETURNING id
+      `, [body.title, body.description, body.location, body.startsAt, body.deadline, body.capacity, status, body.timezone ?? 'America/Chicago', JSON.stringify(defaultDraft)])
+      if (status === 'published') {
+        await publishVersionFromDraft(client, event.id, defaultDraft)
+      }
+      return getEvent(client, event.id, undefined, true)
+    })
+    return reply.code(201).send(created)
   })
 
   app.patch('/admin/events/:id', async request => {
@@ -103,7 +140,7 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
     const { id } = idParams.parse(request.params)
     const patch = eventInput.partial().refine(value => Object.keys(value).length !== 0).parse(request.body)
     return transaction(db, async client => {
-      const { rows: [event] } = await client.query('SELECT starts_at,deadline FROM events WHERE id=$1 FOR UPDATE', [id])
+      const { rows: [event] } = await client.query('SELECT starts_at,deadline,draft,status FROM events WHERE id=$1 FOR UPDATE', [id])
       if (!event) fail(404, 'EVENT_NOT_FOUND', 'Event not found.')
       validateDeadline(patch.deadline ?? event.deadline, patch.startsAt ?? event.starts_at)
       if (patch.capacity !== undefined) {
@@ -117,6 +154,17 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
           location=COALESCE($4,location), starts_at=COALESCE($5,starts_at), deadline=COALESCE($6,deadline),
           capacity=COALESCE($7,capacity), status=COALESCE($8,status), timezone=COALESCE($9,timezone), updated_at=now() WHERE id=$1
       `, [id, patch.title, patch.description, patch.location, patch.startsAt, patch.deadline, patch.capacity, patch.status, patch.timezone])
+      if (patch.status === 'published') {
+        const { rows: [existingVersion] } = await client.query(
+          'SELECT 1 FROM interview_versions WHERE event_id=$1 LIMIT 1', [id],
+        )
+        if (!existingVersion) {
+          if (!event.draft) {
+            await client.query('UPDATE events SET draft=$2 WHERE id=$1', [id, JSON.stringify(defaultDraft)])
+          }
+          await publishVersionFromDraft(client, id, event.draft ?? defaultDraft)
+        }
+      }
       return getEvent(client, id, undefined, true)
     })
   })
@@ -143,21 +191,10 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
     const version = await transaction(db, async client => {
       const { rows: [event] } = await client.query('SELECT draft FROM events WHERE id=$1 FOR UPDATE', [id])
       if (!event) fail(404, 'EVENT_NOT_FOUND', 'Event not found.')
-      if (!event.draft) fail(409, 'INTERVIEW_DRAFT_REQUIRED', 'Save an interview draft before publishing.')
-      const draft = draftInput.parse(event.draft)
-      const versionId = randomUUID()
-      // The version insert seals its questions. The question FK is checked at commit.
-      await client.query(`
-        INSERT INTO questions (id,version_id,prompt,purpose,position,required,max_follow_ups)
-        SELECT q.id,$1,q.prompt,q.purpose,q."order",q.required,q."maxFollowUps"
-        FROM jsonb_to_recordset($2) AS q(id text,prompt text,purpose text,"order" int,required boolean,"maxFollowUps" int)
-      `, [versionId, JSON.stringify(draft.questions)])
-      const { rows: [published] } = await client.query(`
-        INSERT INTO interview_versions (id,event_id,version,intro,tone,max_duration_seconds)
-        SELECT $1,$2,COALESCE(max(version),0)+1,$3,$4,$5 FROM interview_versions WHERE event_id=$2
-        RETURNING id,version,published_at AS "publishedAt"
-      `, [versionId, id, draft.intro, draft.tone, draft.maxDurationSeconds])
-      return published
+      if (!event.draft) {
+        await client.query('UPDATE events SET draft=$2 WHERE id=$1', [id, JSON.stringify(defaultDraft)])
+      }
+      return publishVersionFromDraft(client, id, event.draft ?? defaultDraft)
     })
     return reply.code(201).send(version)
   })
@@ -283,6 +320,28 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
       await client.query('UPDATE applications SET status=$2 WHERE id=$1', [id, decision])
       if (application.status !== decision) await recordActivity(client, application.user_id, application.event_id, decision, application.is_demo)
       return saved
+    })
+  })
+
+  app.post('/admin/applications/:id/attendance', async request => {
+    await auth.requireUser(request, 'staff')
+    const { id } = idParams.parse(request.params)
+    return transaction(db, async client => {
+      const { rows: [application] } = await client.query(`
+        SELECT a.status,a.user_id,a.event_id,e.is_demo
+        FROM applications a JOIN events e ON e.id=a.event_id WHERE a.id=$1 FOR UPDATE OF a
+      `, [id])
+      if (!application) fail(404, 'APPLICATION_NOT_FOUND', 'Application not found.')
+      if (application.status !== 'accepted') {
+        fail(409, 'ATTENDANCE_UNAVAILABLE', 'Only accepted applicants can be marked as attended.')
+      }
+      const { rows: [existing] } = await client.query(`
+        SELECT id FROM activity_events WHERE user_id=$1 AND event_id=$2 AND type='attendance' LIMIT 1
+      `, [application.user_id, application.event_id])
+      if (!existing) {
+        await recordActivity(client, application.user_id, application.event_id, 'attendance', application.is_demo)
+      }
+      return { recorded: true }
     })
   })
 

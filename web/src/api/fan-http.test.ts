@@ -3,6 +3,33 @@ import { createHttpClient } from './http'
 
 afterEach(() => vi.restoreAllMocks())
 describe('live fan adapter', () => {
+  it('requests an email sign-in link without sending a staff role to the backend', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}'))
+    const input = {
+      email: 'staff@example.test',
+      callbackURL: 'https://app.example.test/admin',
+      errorCallbackURL: 'https://app.example.test/sign-in?role=staff',
+    }
+    await createHttpClient('/api').requestMagicLink(input)
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/sign-in/magic-link', expect.objectContaining({
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ ...input, name: 'staff' }),
+    }))
+  })
+
+  it.each(['https://backend.example.test', '/api'])('ends the cookie session with the auth endpoint at %s', async baseUrl => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true })))
+      .mockResolvedValueOnce(new Response('{}', { status: 500 }))
+    const api = createHttpClient(baseUrl)
+    await api.signOut('fan')
+    expect(fetchMock).toHaveBeenCalledWith(`${baseUrl.replace(/\/api$/, '')}/api/auth/sign-out`, expect.objectContaining({
+      method: 'POST', credentials: 'include',
+    }))
+    await expect(api.signOut('staff')).rejects.toMatchObject({ status: 500 })
+  })
+
   it('sends authenticated consent to the event endpoint and never a caller-controlled applicant ID', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'app_live' })))
     const api = createHttpClient('/api')
@@ -25,5 +52,27 @@ describe('live fan adapter', () => {
     await expect(api.setFixtureFan({ displayName: 'Demo', email: 'fan@example.com', phone: '+12025550123' })).rejects.toMatchObject({ code: 'FIXTURE_ONLY' })
     await expect(api.simulateFanCall('app', 'completed')).rejects.toMatchObject({ code: 'FIXTURE_ONLY' })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+  it('updates fan profile, falls back when interview draft is null, and records attendance', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      id: 'user_1', email: 'fan@example.test', displayName: 'FaZe Fan', phone: '+12025550199', role: 'fan',
+    })))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      draft: null, draftUpdatedAt: '2026-04-19T12:00:00.000Z', publishedVersion: null,
+    })))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ recorded: true })))
+    const api = createHttpClient('/api')
+    await api.updateFanProfile({ displayName: 'FaZe Fan', phone: '+12025550199' })
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/me', expect.objectContaining({
+      method: 'PATCH', credentials: 'include', body: JSON.stringify({ displayName: 'FaZe Fan', phone: '+12025550199' }),
+    }))
+    const interview = await api.getInterview('evt_1')
+    expect(interview.draft.questions).toHaveLength(4)
+    expect(interview.hasUnpublishedChanges).toBe(true)
+    await api.recordAttendance('app_1')
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/admin/applications/app_1/attendance', expect.objectContaining({
+      method: 'POST', credentials: 'include', body: JSON.stringify({}),
+    }))
   })
 })

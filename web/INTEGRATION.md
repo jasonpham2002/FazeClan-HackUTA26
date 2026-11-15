@@ -12,7 +12,15 @@ npm.cmd ci
 npm.cmd run dev -- --host 127.0.0.1 --port 5189 --strictPort
 ```
 
-Open http://127.0.0.1:5189. On other platforms use `npm` instead of `npm.cmd`. Source mode defaults to explicitly labeled fixtures; no backend is required.
+Alternatively, on macOS (`zsh`):
+
+```zsh
+cd web
+npm ci
+npm run dev -- --host 127.0.0.1 --port 5189 --strictPort
+```
+
+Open http://127.0.0.1:5189. Source mode defaults to explicitly labeled fixtures; no backend is required.
 
 1. Open the event and submit an application with consent. Use the demo profile; `/sign-in` only changes its fictional details.
 2. Confirm the destination and select **Simulate call request**.
@@ -67,6 +75,13 @@ npm.cmd test
 npm.cmd run build
 ```
 
+Alternatively, on macOS (`zsh`):
+
+```zsh
+npm test
+npm run build
+```
+
 The fixture integration suite checks a new fan application appearing in the staff list, question version pinning, missed-call retry, synthetic transcript evidence, private-note exclusion, ownership, staff decisions, acceptance counts, capacity conflicts, and persistence through an older-store upgrade.
 
 Optional browser regression (Playwright installed separately; start Vite on 5189 first):
@@ -75,6 +90,12 @@ Optional browser regression (Playwright installed separately; start Vite on 5189
 $env:PLAYWRIGHT_MODULE = 'absolute/path/to/playwright/index.mjs'
 $env:BROWSER_CHANNEL = 'chrome'
 node scripts/connected-smoke.mjs
+```
+
+Or on macOS:
+
+```zsh
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs BROWSER_CHANNEL=chrome node scripts/connected-smoke.mjs
 ```
 
 Verified in headless Chrome: the complete flow across separate fan/staff tabs without manually reloading, persistence after reload, and fan layouts at 320, 390, 768, and 1440px. The live smoke test covers Mailpit authentication, persisted staff and fan operations, and the sample interview worker.

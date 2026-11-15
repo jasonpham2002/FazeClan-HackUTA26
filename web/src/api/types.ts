@@ -18,6 +18,7 @@ export interface ErrorEnvelope {
 // ---------- Session ----------
 
 export type Role = 'fan' | 'staff'
+export type DemoSignInContact = { kind: 'gmail' | 'phone'; value: string }
 
 /** CONFIRM (Jason): fields returned by GET /me. */
 export interface Me {
@@ -214,6 +215,7 @@ export interface CallAttempt {
 export interface ActivityEvent {
   id: string
   type: 'application' | 'invitation_accepted' | 'attendance'
+  eventId?: string | null
   eventTitle: string | null
   timestamp: string
   source: string

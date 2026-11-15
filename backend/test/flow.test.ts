@@ -118,6 +118,7 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
   const firstFan = await signIn(testEmails[0], true);
   const secondFan = await signIn(testEmails[1]);
   assert.equal(read<{ role: string }>(await request('GET', '/me', staff), 200).role, 'staff');
+  assert.equal((await request('GET', '/me/applications', staff)).statusCode, 200);
   assert.equal(read<{ role: string }>(await request('GET', '/me', firstFan), 200).role, 'fan');
   assert.deepEqual(read(await request('GET', '/me/activity', firstFan), 200), { activity: [] });
   assert.equal((await request('PATCH', '/me', firstFan, { phone: '+12025550100' })).statusCode, 200);
@@ -133,12 +134,28 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
     capacity: 1,
   };
   assert.equal((await request('POST', '/admin/events', firstFan, eventInput)).statusCode, 403);
+  assert.equal((await request('POST', '/admin/events', staff, { ...eventInput, capacity: 0 })).statusCode, 400);
   const event = read<{ id: string }>(await request('POST', '/admin/events', staff, eventInput), 201);
   eventId = event.id;
   assert.equal((await request('GET', `/events/${event.id}`)).statusCode, 404);
+  const draftState = read<{ draft: { questions: unknown[] }; publishedVersion: unknown; hasUnpublishedChanges: boolean }>(
+    await request('GET', `/admin/events/${event.id}/interview`, staff), 200,
+  );
+  assert.equal(draftState.draft.questions.length, 4);
+  assert.equal(draftState.publishedVersion, null);
+  assert.equal(draftState.hasUnpublishedChanges, true);
+  await db.query('UPDATE events SET draft = NULL WHERE id = $1', [event.id]);
+  const nullDraftState = read<typeof draftState>(await request('GET', `/admin/events/${event.id}/interview`, staff), 200);
+  assert.equal(nullDraftState.draft.questions.length, 4);
+  assert.equal(nullDraftState.hasUnpublishedChanges, true);
   const staffEvents = read<{ events: Array<{ id: string; status: string }> }>(await request('GET', '/admin/events', staff), 200);
   assert.ok(staffEvents.events.some(row => row.id === event.id && row.status === 'draft'));
   read(await request('PATCH', `/admin/events/${event.id}`, staff, { status: 'published' }), 200);
+  const autoPublished = read<{ publishedVersion: { version: number } | null; hasUnpublishedChanges: boolean }>(
+    await request('GET', `/admin/events/${event.id}/interview`, staff), 200,
+  );
+  assert.equal(autoPublished.publishedVersion?.version, 1);
+  assert.equal(autoPublished.hasUnpublishedChanges, false);
   await db.query('UPDATE events SET is_demo = true WHERE id = $1', [event.id]);
   const statsUrl = `/admin/events/${event.id}/analytics`;
   const initial = read<Analytics>(await request('GET', statsUrl, staff), 200);
@@ -287,6 +304,12 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
   assert.equal(read<{ error: { code: string } }>(acceptances[1 - winner], 409).error.code, 'EVENT_FULL');
   const [winningFan, winningPath] = winner === 0 ? [firstFan, firstPath] : [secondFan, secondPath];
   assert.equal(read<Application>(await request('POST', `${winningPath}/accept`, winningFan), 200).status, 'accepted');
+  const losingPath = winner === 0 ? secondPath : firstPath;
+  assert.equal((await request('POST', `/admin${losingPath}/attendance`, staff)).statusCode, 409);
+  assert.deepEqual(read<{ recorded: boolean }>(await request('POST', `/admin${winningPath}/attendance`, staff), 200), { recorded: true });
+  assert.deepEqual(read<{ recorded: boolean }>(await request('POST', `/admin${winningPath}/attendance`, staff), 200), { recorded: true });
+  const winningActivity = read<{ activity: Array<{ type: string; eventId: string }> }>(await request('GET', '/me/activity', winningFan), 200);
+  assert.equal(winningActivity.activity.filter(item => item.type === 'attendance' && item.eventId === event.id).length, 1);
 
   const stats = read<Analytics>(await request('GET', statsUrl, staff), 200);
   assert.deepEqual(stats, { applications: 2, callsAttempted: 2, callsConnected: 2, interviewsCompleted: 2,

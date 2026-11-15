@@ -15,6 +15,7 @@ import type {
   InterviewResult,
   Me,
   PublishedVersionMeta,
+  Role,
   TranscriptSegment,
 } from '../types'
 
@@ -33,6 +34,7 @@ export interface Db {
   schema: 1
   me: Me
   fan: Me
+  signedOut?: Partial<Record<Role, boolean>>
   events: EventRecord[]
   interviews: Record<string, InterviewEntry>
   applications: StoredApplication[]
@@ -41,6 +43,8 @@ export interface Db {
 const EVENT_ID = 'evt_1'
 const EVENT_TITLE = 'Community Night Dallas'
 const STAFF = { id: 'staff_1', displayName: 'Demo Staff' }
+export const DEMO_STAFF_CONTACT = { email: 'faze.demo.staff@gmail.com', phone: '+12025550124' }
+export const DEMO_FAN_CONTACT = { email: 'faze.demo.fan@gmail.com', phone: '+12025550123' }
 
 interface Exchange {
   questionId: string
@@ -130,8 +134,8 @@ function attempt(
   }
 }
 
-function activity(id: string, type: ActivityEvent['type'], eventTitle: string, timestamp: string): ActivityEvent {
-  return { id, type, eventTitle, timestamp, source: 'Seeded demo record', isDemo: true }
+function activity(id: string, type: ActivityEvent['type'], eventTitle: string, timestamp: string, eventId: string | null = EVENT_ID): ActivityEvent {
+  return { id, type, eventId, eventTitle, timestamp, source: 'Seeded demo record', isDemo: true }
 }
 
 function decision(id: string, value: DecisionRecord['decision'], createdAt: string, reason: string | null): DecisionRecord {
@@ -215,7 +219,7 @@ export function createSeed(): Db {
   maya.transcript = mayaCall.transcript
   maya.result = mayaCall.result
   maya.activity = [
-    activity('act_maya_1', 'attendance', 'Fan Meetup Austin', '2025-10-18T23:00:00.000Z'),
+    activity('act_maya_1', 'attendance', 'Fan Meetup Austin', '2025-10-18T23:00:00.000Z', 'evt_austin'),
     activity('act_maya_2', 'application', EVENT_TITLE, maya.submittedAt),
   ]
   maya.pastApplications = [
@@ -359,8 +363,8 @@ export function createSeed(): Db {
 
   return {
     schema: 1,
-    me: { id: STAFF.id, email: 'staff@example.com', displayName: STAFF.displayName, role: 'staff' },
-    fan: { id: 'fan_demo', email: 'fan@example.com', displayName: 'Demo Fan', phone: '+12025550123', role: 'fan' },
+    me: { ...STAFF, ...DEMO_STAFF_CONTACT, role: 'staff' },
+    fan: { id: 'fan_demo', ...DEMO_FAN_CONTACT, displayName: 'Demo Fan', role: 'fan' },
     events: [
       {
         id: EVENT_ID,
