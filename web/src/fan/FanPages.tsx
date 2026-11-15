@@ -1,15 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, Navigate, NavLink, Outlet, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, Outlet, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, ApiError, dataSource } from '../api'
-import { AccessLayout } from '../components/ui/AccessLayout'
-import { Icon } from '../components/ui/Icon'
-import { AccountMenu } from '../components/ui/AccountMenu'
 import { FanDetailsForm } from '../components/ui/FanDetailsForm'
 import { ApplicationStatusBadge, CallStatusBadge } from '../components/ui/StatusBadge'
 import { Button, Card, EmptyState, ErrorState, linkButtonClass, LoadingState, Notice } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
 import { CallTranscript } from './CallTranscript'
+import { FanShell } from './FanShell'
 import { EligibilityGate, EligibilityNote, FazeIdProfile } from './FazeIdProfile'
 import { canRequestCall, eventUnavailable, fanStatusText, normalizePhone } from './logic'
 import { placeProfileCall } from './placeCall'
@@ -35,38 +33,13 @@ function ProfileSettingsLink({ className }: { className: string }) {
 export function FanLayout() {
   const me = useQuery(meOptions)
   return (
-    <AccessLayout
-      home="/"
-      title="Fan experience"
-      sidebar={
-        <>
-          <nav aria-label="Fan navigation" className="access-nav">
-            <NavLink to="/players"><Icon name="players" /> Players</NavLink>
-            <NavLink to="/matches"><Icon name="trophy" /> Matches</NavLink>
-            <NavLink to="/" end><Icon name="calendar" /> Fan events</NavLink>
-            <NavLink to="/rewards"><Icon name="gift" /> Rewards</NavLink>
-            <NavLink to="/profile"><Icon name="profile" /> My FaZe ID</NavLink>
-            {fixture && me.isSuccess && (
-              <NavLink to="/profile/edit"><Icon name="arrowRight" /> Demo profile</NavLink>
-            )}
-            {!me.isSuccess && !me.isPending && (
-              <NavLink to="/sign-in"><Icon name="arrowRight" /> Sign in</NavLink>
-            )}
-          </nav>
-          <div className="access-sidebar-bottom">
-            <nav aria-label="Demo navigation" className="access-nav">
-              <Link to="/admin"><Icon name="dashboard" /> Staff dashboard</Link>
-            </nav>
-          </div>
-        </>
-      }
-      account={me.isSuccess && <AccountMenu account={me.data} />}
-      footer={
-        <p>Independent concept for FaZe Clan · Event admission is reviewed by staff.</p>
-      }
+    <FanShell
+      account={me.isSuccess ? me.data : null}
+      signInVisible={!me.isSuccess && !me.isPending}
+      extraLinks={fixture && me.isSuccess ? [{ to: '/profile/edit', label: 'Demo profile' }] : []}
     >
       <Outlet />
-    </AccessLayout>
+    </FanShell>
   )
 }
 

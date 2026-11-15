@@ -44,6 +44,7 @@ export function PlayerPortrait({ player, className = '' }: { player: Player; cla
   return (
     <div role="img" aria-label={`No photo supplied for ${player.handle}`} className={`relative isolate grid place-items-center overflow-hidden bg-[#161616] [container-type:inline-size] ${className}`}>
       <img src={camo} alt="" className="absolute inset-0 -z-10 size-full object-cover opacity-25 mix-blend-luminosity" />
+      <span aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(80%_60%_at_50%_35%,rgb(228_0_43/0.28),transparent_70%)]" />
       <span aria-hidden="true" className="figure text-[clamp(2.5rem,38cqw,7rem)] text-white/80">{mark}</span>
     </div>
   )

@@ -1,18 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, NavLink, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import type {
   EsportsMatch, HighlightVideo, MatchStatLine, Player, PlayerStats, PredictionMarket, StatKey,
 } from '../api/types'
 import { Icon } from '../components/ui/Icon'
-import { Badge, Button, EmptyState, ErrorState, linkButtonClass, linkClass, LoadingState, Notice, Section } from '../components/ui/ui'
+import { Badge, Button, EmptyState, ErrorState, linkButtonClass, linkClass, LoadingState, Notice } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
 import { canChart, observations, plot, standoutMatch } from '../lib/playerStats'
 import {
   formatDate, formatStat, PickStateBadge, pickState, PlayerPortrait, RosterBadge, SampleBadge, statLabels, useFan,
 } from './fazeid-ui'
 import { eventUnavailable } from './logic'
+import { useReveal } from './useReveal'
 
 const STAT_KEYS: StatKey[] = ['rating', 'kd', 'adr', 'headshotPercent']
 
@@ -80,31 +81,62 @@ function FollowButton({ player }: { player: Player }) {
   )
 }
 
+/** The broadcast-style introduction: text left, portrait right, the handle echoed huge behind. */
 function Identity({ player }: { player: Player }) {
+  const rise = (i: number) => ({ '--i': i }) as CSSProperties
+  const long = player.handle.length > 7
   return (
-    <header className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-end sm:gap-8">
-      <div>
-        <PlayerPortrait player={player} className="aspect-[4/5] w-40 rounded-xl border border-border sm:w-56" />
-        {player.imageCredit && <p className="mt-1.5 text-xs text-subtle">Photo: {player.imageCredit}</p>}
-      </div>
-      <div className="min-w-0 space-y-4">
-        <h1 className="title-display text-6xl break-words sm:text-8xl">{player.handle}</h1>
-        <p className="text-lg text-muted">
-          {[player.displayName, player.role, player.team].filter(Boolean).join(' · ')}
-        </p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <RosterBadge status={player.rosterStatus} />
-          {player.isDemo && <SampleBadge label="Placeholder player" />}
+    <header className="fz-hero">
+      <span aria-hidden="true" className="fz-hero-ghost">{player.handle}</span>
+      <div className="grid gap-8 p-5 sm:p-8 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-end md:gap-10 lg:p-12">
+        <div className="order-2 min-w-0 space-y-6 md:order-1">
+          <div className="fz-rise flex flex-wrap items-center gap-x-4 gap-y-2" style={rise(0)}>
+            <span className="text-white"><RosterBadge status={player.rosterStatus} /></span>
+            {player.isDemo && <SampleBadge label="Placeholder player" />}
+          </div>
+          <div className="space-y-3">
+            <h1 className={`fz-display fz-rise ${long ? 'text-[clamp(3rem,9vw,6.5rem)]' : 'text-[clamp(4rem,12vw,9rem)]'}`} style={rise(1)}>
+              {player.handle}
+            </h1>
+            <p className="fz-rise text-lg text-muted sm:text-xl" style={rise(2)}>
+              {[player.role, player.displayName, player.team].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+          <div className="fz-rise space-y-4" style={rise(3)}>
+            <FollowButton player={player} />
+            <p className="text-sm text-subtle">
+              Roster status checked {formatDateTime(player.checkedAt)}.{' '}
+              {player.sourceUrl
+                ? <a href={player.sourceUrl} target="_blank" rel="noreferrer" className={linkClass}>Source</a>
+                : 'No source link supplied.'}
+            </p>
+          </div>
         </div>
-        <FollowButton player={player} />
-        <p className="text-sm text-subtle">
-          Roster status checked {formatDateTime(player.checkedAt)}.{' '}
-          {player.sourceUrl
-            ? <a href={player.sourceUrl} target="_blank" rel="noreferrer" className={linkClass}>Source</a>
-            : 'No source link supplied.'}
-        </p>
+        <div className="order-1 md:order-2">
+          <div className="fz-hero-portrait fz-portrait-in mx-auto w-full max-w-[17rem] sm:max-w-xs md:max-w-none">
+            <PlayerPortrait player={player} className="aspect-[4/5] w-full" />
+          </div>
+          {player.imageCredit && <p className="mt-2 text-right text-xs text-subtle">Photo: {player.imageCredit}</p>}
+        </div>
       </div>
     </header>
+  )
+}
+
+/** Page-level section on the profile: a large display heading, then content that fades in on first view. */
+function Section({ title, meta, actions, children }: { title: ReactNode; meta?: ReactNode; actions?: ReactNode; children: ReactNode }) {
+  const ref = useReveal<HTMLElement>()
+  return (
+    <section ref={ref} className="scroll-mt-24">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border pb-4 sm:mb-8">
+        <div className="min-w-0 space-y-2">
+          <h2 className="fz-section-title">{title}</h2>
+          {meta && <div className="fz-meta flex flex-wrap items-center gap-x-3 gap-y-1.5">{meta}</div>}
+        </div>
+        {actions}
+      </header>
+      {children}
+    </section>
   )
 }
 
@@ -172,14 +204,21 @@ function PerformanceChart({ lines, metric, selectedId, onSelect }: {
         className="h-auto w-full"
         onMouseLeave={() => setHoverId(null)}
       >
+        <defs>
+          <linearGradient id="fz-chart-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
         {[PAD, H / 2, H - PAD].map(y => <line key={y} x1={PAD} x2={W - PAD} y1={y} y2={y} stroke="var(--color-border)" strokeWidth="1" />)}
         <text x={PAD - 6} y={PAD + 4} textAnchor="end" fontSize="12" fill="var(--color-subtle)">{formatStat(metric, max)}</text>
         <text x={PAD - 6} y={H - PAD + 4} textAnchor="end" fontSize="12" fill="var(--color-subtle)">{formatStat(metric, min)}</text>
-        <path d={path} fill="none" stroke="var(--color-accent-text)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-        {coords.map(point => {
+        <path d={`M${coords[0].x} ${H - PAD} ${path.slice(1)} L${coords.at(-1)!.x} ${H - PAD} Z`} fill="url(#fz-chart-fill)" className="fz-swap" />
+        <path d={path} pathLength={1} className="fz-chart-line" fill="none" stroke="var(--color-accent-text)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        {coords.map((point, index) => {
           const active = point.line.matchId === selectedId
           return (
-            <g key={point.line.matchId} onMouseEnter={() => setHoverId(point.line.matchId)} onClick={() => onSelect(point.line.matchId)} className="cursor-pointer">
+            <g key={point.line.matchId} onMouseEnter={() => setHoverId(point.line.matchId)} onClick={() => onSelect(point.line.matchId)} className="fz-chart-dot cursor-pointer" style={{ '--i': index } as CSSProperties}>
               <circle cx={point.x} cy={point.y} r="18" fill="transparent" />
               <circle
                 cx={point.x} cy={point.y} r={active ? 7 : 5}
@@ -210,7 +249,7 @@ function PerformanceChart({ lines, metric, selectedId, onSelect }: {
 
 function MatchDetail({ line, standout, metric }: { line: MatchStatLine; standout: boolean; metric: StatKey }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 sm:p-5">
+    <div className="fz-swap rounded-xl border border-border bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h3 className="font-bold">vs {line.opponent}</h3>
         {standout && <Badge tone="accent">Best {statLabels[metric]} of this period</Badge>}
@@ -333,7 +372,7 @@ function Analytics({ player }: { player: Player }) {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
           <StatRail stats={data} metric={metric} onSelect={setMetric} />
-          <PerformanceChart lines={lines} metric={metric} selectedId={selected?.matchId ?? null} onSelect={setPicked} />
+          <PerformanceChart key={metric} lines={lines} metric={metric} selectedId={selected?.matchId ?? null} onSelect={setPicked} />
           {sorted.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-muted">Recent matches</h3>
@@ -365,7 +404,7 @@ function Analytics({ player }: { player: Player }) {
               </ul>
             </div>
           )}
-          {selected && <MatchDetail line={selected} metric={metric} standout={selected.matchId === best?.matchId} />}
+          {selected && <MatchDetail key={`-${metric}`} line={selected} metric={metric} standout={selected.matchId === best?.matchId} />}
         </div>
         <AiAnalysis playerId={player.id} stats={data} />
       </div>
@@ -385,16 +424,22 @@ function Analytics({ player }: { player: Player }) {
 
 function MatchRow({ match, market }: { match: EsportsMatch; market?: PredictionMarket }) {
   const opponent = match.participants.slice(1).join(', ') || 'Opponent to be confirmed'
+  const day = new Intl.DateTimeFormat(undefined, { day: 'numeric', timeZone: match.timezone }).format(new Date(match.startsAt))
+  const month = new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: match.timezone }).format(new Date(match.startsAt))
   return (
-    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+      <div className="fz-date-block" aria-hidden="true">
+        <span className="figure text-2xl leading-none">{day}</span>
+        <span className="text-xs font-semibold text-muted uppercase">{month}</span>
+      </div>
       <div className="min-w-0">
-        <p className="font-semibold">vs {opponent}</p>
+        <p className="font-bold">vs {opponent}</p>
         <p className="text-sm text-muted">
           {match.tournament.name}{match.stage ? ` · ${match.stage}` : ''}
         </p>
         <p className="text-sm text-subtle">{formatDateTime(match.startsAt, match.timezone)}</p>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="col-start-2 flex flex-wrap items-center gap-3 sm:col-start-3 sm:justify-end">
         {match.result
           ? <Badge tone={match.result.winner === match.participants[0] ? 'ok' : 'gray'}>
               {match.result.winner === match.participants[0] ? 'Won' : 'Lost'}{match.result.score ? ` ${match.result.score}` : ''}
@@ -446,7 +491,7 @@ function Schedule({ player }: { player: Player }) {
           ))}
         </ul>
       )}
-      <div className="grid gap-x-10 gap-y-6 lg:grid-cols-2">
+      <div className="grid gap-x-12 gap-y-10 lg:grid-cols-2">
         <div>
           <h3 className="text-sm font-semibold text-muted">Upcoming</h3>
           {upcoming.length
@@ -634,7 +679,7 @@ export function PlayerPage() {
         : player.isError ? <ErrorState error={player.error} onRetry={() => player.refetch()} />
         : (
           // Keyed so chart and video selections reset when switching players.
-          <div key={player.data.id} className="space-y-14">
+          <div key={player.data.id} className="space-y-20 sm:space-y-28">
             <Identity player={player.data} />
             <Analytics player={player.data} />
             <Schedule player={player.data} />

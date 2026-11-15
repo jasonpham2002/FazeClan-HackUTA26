@@ -1,43 +1,59 @@
 import { useQuery } from '@tanstack/react-query'
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import type { Player } from '../api/types'
 import { Icon } from '../components/ui/Icon'
-import { EmptyState, ErrorState, LoadingState, Notice } from '../components/ui/ui'
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
-import { pageTitle, PlayerPortrait, RosterBadge, SampleBadge, useFan } from './fazeid-ui'
+import { PlayerPortrait, RosterBadge, SampleBadge, useFan } from './fazeid-ui'
+import { useReveal } from './useReveal'
 
-function PlayerCard({ player, following }: { player: Player; following: boolean }) {
+function PlayerCard({ player, index, following }: { player: Player; index: number; following: boolean }) {
   return (
-    <li>
-      <Link
-        to={`/players/${encodeURIComponent(player.id)}`}
-        className="group relative block overflow-hidden rounded-xl border border-border bg-surface transition-[border-color,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text"
-      >
-        <PlayerPortrait player={player} className="aspect-[4/5] w-full transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent px-4 pt-14 pb-4 text-white">
-          <p className="title-display text-3xl break-words">{player.handle}</p>
-          <p className="mt-1 text-sm text-white/75">{player.role ?? 'Role not listed'}</p>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-white">
-            <RosterBadge status={player.rosterStatus} />
-            <span className="inline-flex items-center gap-1 text-sm font-semibold">
-              {following ? 'Following' : 'View profile'}
-              <Icon name={following ? 'check' : 'arrowRight'} className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+    <li className="fz-rise" style={{ '--i': index + 2 } as CSSProperties}>
+      <Link to={`/players/${encodeURIComponent(player.id)}`} className="fz-roster-card group" aria-label={`${player.handle}, ${player.role ?? 'role not listed'}. View profile`}>
+        <div className="fz-portrait-wrap">
+          <PlayerPortrait player={player} className="aspect-[3/4] w-full" />
+        </div>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        <span aria-hidden="true" className="fz-card-index figure absolute top-3 left-4 text-lg text-white/55">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+        {following && (
+          <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
+            <Icon name="check" className="size-3.5" /> Following
+          </span>
+        )}
+        <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
+          <p className="fz-display text-[clamp(1.75rem,3.2vw,2.5rem)]">{player.handle}</p>
+          <p className="mt-1.5 text-sm text-white/75">{player.role ?? 'Role not listed'}</p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-white"><RosterBadge status={player.rosterStatus} /></span>
+            <span className="fz-card-cta inline-flex items-center gap-1 text-sm font-semibold">
+              Profile <Icon name="arrowRight" className="size-4" />
             </span>
           </div>
         </div>
+        <span aria-hidden="true" className="fz-card-bar" />
       </Link>
     </li>
   )
 }
 
-function Group({ title, players, follows }: { title: string; players: Player[]; follows: string[] }) {
+function Group({ title, players, follows, offset }: { title: string; players: Player[]; follows: string[]; offset: number }) {
+  const ref = useReveal<HTMLElement>()
   if (!players.length) return null
   return (
-    <section>
-      <h2 className="heading-section mb-4 border-b border-border pb-3">{title}</h2>
-      <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-        {players.map(player => <PlayerCard key={player.id} player={player} following={follows.includes(player.id)} />)}
+    <section ref={ref} aria-label={title} className="space-y-5">
+      <div className="flex items-baseline justify-between gap-4 border-b border-border pb-3">
+        <h2 className="fz-section-title">{title}</h2>
+        <span className="fz-meta">{players.length} {players.length === 1 ? 'person' : 'people'}</span>
+      </div>
+      <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
+        {players.map((player, index) => (
+          <PlayerCard key={player.id} player={player} index={offset + index} following={follows.includes(player.id)} />
+        ))}
       </ul>
     </section>
   )
@@ -48,33 +64,49 @@ export function PlayersPage() {
   const players = useQuery({ queryKey: ['players'], queryFn: api.listPlayers })
   const follows = useQuery({ queryKey: ['fan', 'follows'], queryFn: api.listFollows, enabled: Boolean(fan) })
 
-  if (players.isPending) return <LoadingState label="Loading the roster…" />
-  if (players.isError) return <ErrorState error={players.error} onRetry={() => players.refetch()} />
-  if (!players.data.length) {
-    return <EmptyState title="Player data is not available yet">The verified roster appears here once it has been imported.</EmptyState>
-  }
-
-  const list = players.data
+  const list = players.data ?? []
+  const active = list.filter(player => player.rosterStatus === 'active')
+  const coaches = list.filter(player => player.rosterStatus === 'coach')
+  const others = list.filter(player => player.rosterStatus === 'benched' || player.rosterStatus === 'former')
   const checkedAt = list.map(player => player.checkedAt).sort().at(-1) ?? null
+  const sample = list.some(player => player.isDemo)
   const followed = follows.data ?? []
+
   return (
-    <div className="space-y-10">
-      <header className="max-w-3xl space-y-4 pt-4">
-        <h1 className={pageTitle}>FaZe CS2 roster</h1>
-        <p className="text-lg text-muted">Pick a player to see their numbers, their next matches and their best moments.</p>
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
-          <span>Roster checked {formatDateTime(checkedAt)}. Refreshed by hand, not a live feed.</span>
-          {list.some(player => player.isDemo) && <SampleBadge />}
-        </p>
+    <div className="space-y-16 sm:space-y-20">
+      <header className="relative grid gap-8 pt-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-end">
+        <div aria-hidden="true" className="pointer-events-none absolute -top-24 -left-24 -z-10 size-[28rem] rounded-full bg-[radial-gradient(closest-side,rgb(228_0_43/0.22),transparent)]" />
+        <div className="space-y-5">
+          <h1 className="fz-display fz-rise text-[clamp(3.5rem,11vw,8.5rem)]" style={{ '--i': 1 } as CSSProperties}>
+            The FaZe<br /><span className="text-accent-text">CS2 roster</span>
+          </h1>
+        </div>
+        <div className="fz-rise space-y-4 lg:pb-3" style={{ '--i': 2 } as CSSProperties}>
+          <p className="max-w-[46ch] text-lg leading-relaxed text-muted">
+            Choose a player for their numbers first, then their next matches, their best moments and the fan events around them.
+          </p>
+          <p className="fz-meta">
+            Roster checked {formatDateTime(checkedAt)}. Refreshed by hand, not a live feed.
+          </p>
+          {sample && (
+            <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+              <SampleBadge label="Placeholder players" />
+              Real names, photos and statistics replace these when the team’s verified import is ready.
+            </p>
+          )}
+        </div>
       </header>
-      {list.some(player => player.isDemo) && (
-        <Notice tone="warn">
-          These are placeholder players, not the real roster. Verified names, photos and statistics replace them when the team’s data import is ready.
-        </Notice>
-      )}
-      <Group title="Active roster" players={list.filter(player => player.rosterStatus === 'active')} follows={followed} />
-      <Group title="Coaching staff" players={list.filter(player => player.rosterStatus === 'coach')} follows={followed} />
-      <Group title="Benched and former players" players={list.filter(player => player.rosterStatus === 'benched' || player.rosterStatus === 'former')} follows={followed} />
+
+      {players.isPending ? <LoadingState label="Loading the roster…" />
+        : players.isError ? <ErrorState error={players.error} onRetry={() => players.refetch()} />
+        : !list.length ? <EmptyState title="Player data is not available yet">The verified roster appears here once it has been imported.</EmptyState>
+        : (
+          <>
+            <Group title="Active roster" players={active} follows={followed} offset={0} />
+            <Group title="Coaching staff" players={coaches} follows={followed} offset={active.length} />
+            <Group title="Benched and former" players={others} follows={followed} offset={active.length + coaches.length} />
+          </>
+        )}
     </div>
   )
 }
