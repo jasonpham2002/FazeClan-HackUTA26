@@ -1,6 +1,6 @@
 # Backend release on Vultr
 
-The public frontend uses `http://104.238.146.107:3001`. Updating static frontend files alone does not restart the Node API. This repository has no checked-in GitHub Actions deployment workflow; any auto-deployment is configured outside the repository and must update both services.
+The direct-port setup uses `http://104.238.146.107:3001` for the API. To serve the frontend and API at `manilovefaze.club`, use the same-origin setup below. Updating static frontend files alone does not restart the Node API. This repository has no checked-in GitHub Actions deployment workflow. Any auto-deployment is configured outside the repository and must update both services.
 
 ## Release the existing service
 
@@ -36,7 +36,21 @@ npm ci
 VITE_DATA_SOURCE=live VITE_API_BASE_URL=http://104.238.146.107:3001 npm run build
 ```
 
-Serve the updated `web/dist/` through the existing static host. `/api` on port 80 currently returns the frontend HTML, so it is not the API base URL unless the host's reverse proxy is explicitly changed.
+Serve the updated `web/dist/` through the existing static host.
+
+## Same-origin demo at manilovefaze.club
+
+Build from `web/` with `VITE_DATA_SOURCE=live VITE_API_BASE_URL=/api npm run build`. Use the public site origin for the backend's `PUBLIC_BASE_URL` (for example, `http://manilovefaze.club`) and include it in `APP_ORIGINS`.
+
+If the site is served by Vite preview, run it with the checked-in `web/vite.config.ts`. If another proxy owns the public routes, apply the same routing there and remove any rules that send page paths such as `/admin` to the API.
+
+| Public path | Upstream |
+|---|---|
+| `/api/auth/*` | Backend on port 3001 with the full path and query preserved |
+| Other `/api/*` | Backend on port 3001 with the leading `/api` removed |
+| `/admin`, `/admin/*`, and other browser pages | Serve the frontend and fall back to `index.html` for page routes |
+
+After updating the host, check that opening `/admin` directly serves HTML and that `/api/admin/events` returns JSON with HTTP 401 without a session. Request a new staff link in Mailpit, open it in the same browser, and reload the dashboard to verify the redirect and session.
 
 ## Verify the release
 

@@ -72,7 +72,7 @@ The smoke test creates an application, publishes a new version, and makes a staf
 
 ## Vultr demo release
 
-The current Vultr demo serves the web app at `http://104.238.146.107` and the API directly on port `3001`. The sign-in screen opens Mailpit on port `8025` of the configured API host. The API delivers to Mailpit over loopback SMTP on the server.
+For the domain deployment, follow the [same-origin routing setup](../backend/DEPLOYMENT.md#same-origin-demo-at-manilovefazeclub). The direct-port setup below serves the web app at `http://104.238.146.107` and the API on port `3001`. The sign-in screen opens Mailpit on port `8025` of the configured API host. The API delivers to Mailpit over loopback SMTP on the server.
 
 1. From `backend/` on the host, run `npm run migrate` with the deployed API's existing database configuration before or alongside restarting the updated API and worker (deploy the updated `backend/` code before or together with migrating, because `008_engagement_ui_compat.sql` converts `rewards.kind` to `merch` and `reward_redemptions.status` to `requested`). This release needs `006_engagement.sql`, `007_engagement_compat.sql`, and `008_engagement_ui_compat.sql` (and optionally `npm run seed` to add the sample reward `Sample FaZe merch`). Use Node.js 24 or newer. With the current public addresses, the API uses `PUBLIC_BASE_URL=http://104.238.146.107:3001`, trusts `http://104.238.146.107` in `APP_ORIGINS`, and sends through `MAIL_HOST=127.0.0.1` and `MAIL_PORT=1025`.
 2. From `web/`, build and serve the resulting `dist/` with the existing static site configuration. Explicit build variables take precedence over local Vite settings.
