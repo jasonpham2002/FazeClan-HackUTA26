@@ -128,3 +128,7 @@ The local worker runs sample interviews. Coordinate the Muse agent handoff with 
 ## Sourced CS2 player data
 
 The first real, source-attributed roster/stat bundle and dry-run/import instructions are in [data/README.md](data/README.md). Migration 010 adds the player/snapshot tables. Public read endpoints are `/players`, `/players/:id`, and `/players/:id/stats`. Source snapshots may be cached and are not a live feed; keep their period/freshness metadata visible.
+
+## Vultr release verification
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the backend/worker restart, schema selection and import steps. `npm run verify:deployment -- http://104.238.146.107:3001` checks the public release without credentials. Migration 011 connects imported player IDs to follows; health now checks the esports and engagement schema as well as points.

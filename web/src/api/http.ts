@@ -1,3 +1,4 @@
+import { playerRecord, playerStats, type PlayerDto, type StatsDto } from './esports'
 import { defaultInterviewConfig } from '../lib/interviewConfig'
 import { ApiError, type ApiClient } from './client'
 import type {
@@ -227,11 +228,10 @@ export function createHttpClient(baseUrl: string): ApiClient {
     // CONFIRM (Jason): not implemented in the backend yet; shape is InsightsReport in types.ts.
     getInsights: () => request('GET', '/admin/insights'),
 
-    // ----- FaZe ID. CONFIRM (Johnny, Minh, Jason): none of these routes exist yet, so in
-    // live mode each screen shows the API error until its owner ships the endpoint. -----
-    listPlayers: async () => list(await request('GET', '/players'), 'players'),
-    getPlayer: id => request('GET', `/players/${enc(id)}`),
-    getPlayerStats: id => request('GET', `/players/${enc(id)}/stats`),
+    // FaZe ID: sourced player data is adapted here; unimplemented integrations surface API errors.
+    listPlayers: async () => list<PlayerDto>(await request('GET', '/players'), 'players').map(playerRecord),
+    getPlayer: async id => playerRecord(await request<PlayerDto>('GET', `/players/${enc(id)}`)),
+    getPlayerStats: async id => playerStats(await request<StatsDto>('GET', `/players/${enc(id)}/stats`)),
     getPlayerSchedule: async id => {
       const body = await request<unknown>('GET', `/players/${enc(id)}/matches`)
       return { matches: list(body, 'matches'), tournaments: list(body, 'tournaments', true) }

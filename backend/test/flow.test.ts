@@ -127,7 +127,14 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
     return cookies;
   }
 
-  assert.equal((await request('GET', '/health')).statusCode, 200);
+  const health = read<{ status: string; apiVersion: string; capabilities: string[] }>(await request('GET', '/health'), 200);
+  assert.equal(health.apiVersion, 'faze-id-v1');
+  assert.ok(health.capabilities.includes('players') && health.capabilities.includes('rewards'));
+  if (schema !== 'faze') {
+    await db.query('ALTER VIEW engagement_players RENAME TO engagement_players_not_ready');
+    assert.equal(read<{ error: { code: string } }>(await request('GET', '/health'), 503).error.code, 'SCHEMA_NOT_READY');
+    await db.query('ALTER VIEW engagement_players_not_ready RENAME TO engagement_players');
+  }
   assert.equal((await request('GET', '/me')).statusCode, 401);
   const staff = await signIn('staff@example.test');
   const firstFan = await signIn(testEmails[0], true);
@@ -151,9 +158,10 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
   const engagement = schema !== 'faze';
   let merchId = '';
   if (engagement) {
-    assert.equal(errorCode(await request('PUT', '/me/follows/demo-player', firstFan), 503), 'ESPORTS_DATA_UNAVAILABLE');
+    assert.equal(errorCode(await request('PUT', '/me/follows/demo-player', firstFan), 404), 'PLAYER_NOT_FOUND');
     await db.query(`
-      CREATE VIEW engagement_players AS SELECT 'demo-player'::text AS id;
+      INSERT INTO esports_players(id,handle,display_name,roster_status,checked_at,profile)
+      VALUES ('demo-player','Demo','Synthetic test player','active',now(),'{}');
       CREATE VIEW engagement_matches AS
         SELECT 'demo-match'::text AS id, '[Replay] CS2 match'::text AS title, now() + interval '1 day' AS starts_at,
           '[{"id":"a","label":"Demo team A"},{"id":"b","label":"Demo team B"}]'::jsonb AS participants, true AS is_demo;

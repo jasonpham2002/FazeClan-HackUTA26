@@ -54,7 +54,7 @@ After migration/import and API restart:
 
 Each metric is a nullable number except `ratingDefinition`, which labels the provider's method. Percentage values are on a 0–100 scale. Render null as unavailable, not zero. Coach/bench records without stat snapshots return `404 STATS_UNAVAILABLE`, not fake player statistics. The ID is an opaque string, not a UUID.
 
-No frontend pages were changed; Khoi owns that integration. No upcoming match times, brackets, highlights, follows or points were fabricated or added in this first data bundle.
+The live frontend adapter now maps these records into the player pages. Missing period dates and metrics remain null; source links, collection time and freshness limitations are displayed. Player photos remain unavailable unless separately supplied. No upcoming match times, brackets, highlights, follows or points were fabricated or added in this first data bundle.
 
 ## Minh: evidence for AI
 
@@ -63,3 +63,5 @@ Use the returned immutable snapshot ID and its source metadata as AI context. Ex
 ## Verification
 
 Backend TypeScript and the import dry run pass. Real PostgreSQL tests verify repeat imports, malformed/unknown-source rejection, stable snapshots, source-linked read endpoints, player ownership of snapshot IDs, missing coach stats, preserved newer roster records, and retained historical snapshots. Existing backend interview/application tests also pass. These tests use disposable TLS PostgreSQL schemas, not the team's shared Tiger service.
+
+Migration 011 adds `engagement_players`, a view over the imported roster IDs used by the follows API. Apply it with `npm run migrate` before testing follows. See [deployment steps](../DEPLOYMENT.md) to import into the deployed backend's existing schema without switching its user database.

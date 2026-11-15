@@ -55,10 +55,13 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
   })
   app.get('/health', async () => {
     const { rows: [schema] } = await db.query<{ ready: boolean }>(
-      `SELECT to_regclass('point_transactions') IS NOT NULL AS ready`,
+      `SELECT bool_and(to_regclass(name) IS NOT NULL) AS ready FROM unnest(ARRAY[
+        'user','events','point_transactions','prediction_markets','rewards',
+        'esports_players','esports_stat_snapshots','engagement_players'
+      ]) AS required(name)`,
     ).catch(() => fail(503, 'DATABASE_UNAVAILABLE', 'The database is unavailable.'))
     if (!schema.ready) fail(503, 'SCHEMA_NOT_READY', 'Run the backend migrations before using this API.')
-    return { status: 'ok' }
+    return { status: 'ok', apiVersion: 'faze-id-v1', capabilities: ['players', 'predictions', 'points', 'rewards'] }
   })
   const auth = registerAuth(app, db, config, sendMail)
   registerPlayerRoutes(app, db)

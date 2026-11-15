@@ -367,7 +367,7 @@ function Analytics({ player }: { player: Player }) {
   return (
     <Section
       title="Performance"
-      meta={`${data.period.label} · ${formatDate(data.period.start)} to ${formatDate(data.period.end)}${data.mapsPlayed !== null ? ` · ${data.mapsPlayed} maps` : ''}`}
+      meta={`${data.period.label} · ${data.period.start && data.period.end ? `${formatDate(data.period.start)} to ${formatDate(data.period.end)}` : 'Date range not supplied by source'}${data.mapsPlayed !== null ? ` · ${data.mapsPlayed} maps` : ''}`}
       actions={data.isDemo ? <SampleBadge label="Demo numbers — not real statistics" /> : undefined}
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
@@ -410,13 +410,19 @@ function Analytics({ player }: { player: Player }) {
         <AiAnalysis playerId={player.id} stats={data} />
       </div>
       <p className="mt-5 text-sm text-subtle">
-        Statistics last updated {formatDateTime(data.retrievedAt)}.{' '}
+        Snapshot collected {formatDateTime(data.retrievedAt)}.{' '}
+        {data.sourceUpdatedAt ? <>Source updated {formatDateTime(data.sourceUpdatedAt)}.</> : 'Source update time is unverified.'}{' '}
         {data.sources.length > 0
           ? <>Sources: {data.sources.map((source, index) => (
               <span key={source.id}>{index > 0 && ', '}<a href={source.url} target="_blank" rel="noreferrer" className={linkClass}>{source.label ?? new URL(source.url).hostname}</a></span>
             ))}.</>
           : 'No source links were supplied with this snapshot.'}
       </p>
+      {!!data.limitations?.length && (
+        <ul aria-label="Data limitations" className="mt-3 list-disc space-y-1 pl-5 text-xs text-subtle">
+          {data.limitations.map((limitation, index) => <li key={index}>{limitation}</li>)}
+        </ul>
+      )}
     </Section>
   )
 }

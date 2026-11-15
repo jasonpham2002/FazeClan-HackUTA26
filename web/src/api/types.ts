@@ -432,12 +432,14 @@ export interface MatchStatLine {
 export interface PlayerStats {
   playerId: string
   snapshotId: string
-  period: { label: string; start: string; end: string }
+  period: { label: string; start: string | null; end: string | null }
   mapsPlayed: number | null
   metrics: Record<StatKey, Metric>
   recentMatches: MatchStatLine[]
   sources: SourceRef[]
   retrievedAt: string
+  sourceUpdatedAt?: string | null
+  limitations?: string[]
   isDemo: boolean
 }
 
