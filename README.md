@@ -30,7 +30,7 @@ lsof -nP -iTCP:5189 -sTCP:LISTEN
 
 Either reuse `http://127.0.0.1:5189`, stop the existing server (`Ctrl+C` in its terminal, or `kill <PID>` from the `lsof` output), or run Vite on another allowed port (`--port 3000` or `--port 3002`, or omit `--strictPort` in fixture mode).
 
-Open http://127.0.0.1:5189 for fans and http://127.0.0.1:5189/admin for staff. Fixture mode is explicit; no real call, login, or backend is simulated as a live integration. To run with the live backend on macOS instead (Node.js 24+, Mailpit via `brew install mailpit` or `backend/.local/bin/mailpit`, and Tiger Cloud), follow [backend/README.md](backend/README.md) and set `VITE_DATA_SOURCE=live` and `VITE_API_BASE_URL=http://127.0.0.1:3001` in `web/.env.local` per [web/INTEGRATION.md](web/INTEGRATION.md#run-with-the-local-backend).
+Open http://127.0.0.1:5189 for fans and http://127.0.0.1:5189/admin for staff. The frontend now defaults to the live API at `http://127.0.0.1:3001`; browser-only fixture mode requires an explicit `VITE_DATA_SOURCE=fixtures` setting. Fixture accounts do not write to PostgreSQL. To configure the backend on macOS (Node.js 24+, Mailpit via `brew install mailpit` or `backend/.local/bin/mailpit`, and Tiger Cloud), follow [backend/README.md](backend/README.md) and set `VITE_DATA_SOURCE=live` and `VITE_API_BASE_URL=http://127.0.0.1:3001` in `web/.env.local` per [web/INTEGRATION.md](web/INTEGRATION.md#run-with-the-local-backend).
 
 The earlier standalone [frontend/](frontend/README.md) is preserved for reference. Its separate demo store does not sync with the connected app. Use `web/` for team integration and confirm its [shared API contracts](web/INTEGRATION.md) with Jason.
 

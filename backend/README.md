@@ -76,3 +76,12 @@ The local worker runs sample interviews. Coordinate the Muse agent handoff with 
 ## Verify
 
 `npm test` uses a disposable `faze_test_*` schema, captures the email delivery in memory, and exercises the real magic-link and worker ingestion routes. It drops the disposable schema after the run. To test actual SMTP delivery, keep Mailpit running on the loopback ports above and use `TEST_SMTP=1 npm test`. For a development-schema rehearsal, stop the regular worker and run `TEST_SCHEMA=faze TEST_SMTP=1 npm test`. That run targets `faze`, retains the seed data, and removes the event and fan accounts created by the test. Set `TEST_PORT` if the test API cannot use port `3011`.
+
+## Database troubleshooting
+
+- The real API requires a populated `backend/.env`; `.env.example` contains blank placeholders, not credentials. Supply `DATABASE_URL`, separate auth/ingestion secrets, and any required CA file using your local credential source. Never commit these values.
+- A yellow Fixture mode banner means the frontend uses browser localStorage and will not send sign-ups to PostgreSQL. Use `VITE_DATA_SOURCE=live`, the API base URL, and restart Vite. Complete the email magic link before expecting a verified user account. The local auth service permits `@example.test` accounts.
+- Check `/health`: it queries the database and returns 503 when connectivity fails. An empty database also needs `npm run migrate` and `npm run seed` before using the seeded reviewer/event.
+- Database objects are in the `faze` schema, not necessarily `public`. Query `SELECT id,email,role FROM faze."user"` in your database console after verifying sign-in. Confirm the console and API use the same service/database/schema.
+- Migration checksums now normalize LF/CRLF line endings and accept historical checksums from either platform. The migration runner updates only recognized line-ending variants to the canonical hash; actual SQL changes still fail. Do not edit applied migration SQL to bypass an error.
+- Backend tests default to disposable `faze_test_*` schemas. They are not expected to add accounts to the shared `faze` schema. Do not set `TEST_SCHEMA=faze` for a routine test run.

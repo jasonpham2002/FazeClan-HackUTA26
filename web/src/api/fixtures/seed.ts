@@ -34,6 +34,7 @@ export interface Db {
   schema: 1
   me: Me
   fan: Me
+  otherFans: Me[]
   signedOut?: Partial<Record<Role, boolean>>
   events: EventRecord[]
   interviews: Record<string, InterviewEntry>
@@ -365,6 +366,7 @@ export function createSeed(): Db {
     schema: 1,
     me: { ...STAFF, ...DEMO_STAFF_CONTACT, role: 'staff' },
     fan: { id: 'fan_demo', ...DEMO_FAN_CONTACT, displayName: 'Demo Fan', role: 'fan' },
+    otherFans: [],
     events: [
       {
         id: EVENT_ID,

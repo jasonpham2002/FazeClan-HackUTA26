@@ -20,9 +20,11 @@ npm ci
 npm run dev -- --host 127.0.0.1 --port 5189 --strictPort
 ```
 
-Open http://127.0.0.1:5189. Source mode defaults to explicitly labeled fixtures; no backend is required.
+Open http://127.0.0.1:5189. Live API mode is the default and requires the backend described below. For a browser-only walkthrough, explicitly set `VITE_DATA_SOURCE=fixtures` in `web/.env.local` and restart Vite; those sample accounts never reach PostgreSQL.
 
-1. Open the event and submit an application with consent. Use the demo profile; `/sign-in` only changes its fictional details.
+The following steps describe explicit fixture mode only. For database-backed accounts use the local-backend section below.
+
+1. Open the event and submit an application with consent. Use the sample account; fixture sign-in and sign-up only change browser-local records.
 2. Confirm the destination and select **Simulate call request**.
 3. Select **Simulate completed interview** to create clearly synthetic Q&A. **Simulate missed call** also supports retries.
 4. Open **Review in staff dashboard**. This is the same application ID and pinned interview version, not a separate sample.

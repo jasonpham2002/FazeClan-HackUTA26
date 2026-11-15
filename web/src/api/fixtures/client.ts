@@ -9,6 +9,7 @@ import type {
   InterviewState,
   Role,
   FixtureFanInput,
+  Me,
 } from '../types'
 import { createSeed, DEMO_FAN_CONTACT, DEMO_STAFF_CONTACT, type Db, type InterviewEntry, type StoredApplication } from './seed'
 import { eventUnavailable, normalizePhone } from '../../fan/logic'
@@ -62,6 +63,9 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
           if (parsed.me.email === 'staff@example.com') parsed.me.email = DEMO_STAFF_CONTACT.email
           parsed.me.phone ??= DEMO_STAFF_CONTACT.phone
           if (parsed.fan.email === 'fan@example.com') parsed.fan.email = DEMO_FAN_CONTACT.email
+          if (!parsed.otherFans) {
+            migrateFanAccounts(parsed)
+          }
           return parsed
         }
       } catch {
@@ -104,12 +108,39 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
     return call(kind, run, 'staff')
   }
 
-  function updateFan(db: Db, input: FixtureFanInput) {
+  function migrateFanAccounts(db: Db) {
+    const activeEmail = db.fan.email.trim().toLowerCase()
+    const demo = { ...createSeed().fan, id: 'fan_default' }
+    db.otherFans = activeEmail === demo.email ? [] : [demo]
+    for (const app of db.applications) {
+      if (app.applicant.id !== db.fan.id) continue
+      const savedEmail = app.applicant.email.trim().toLowerCase()
+      const email = savedEmail === 'fan@example.com' ? demo.email : savedEmail
+      if (email === activeEmail) continue
+      // Keep records from overwritten profiles in staff review without exposing them to a different fan.
+      app.applicant.id = email === demo.email ? demo.id : `legacy_${app.id}`
+    }
+  }
+
+  function fanDetails(input: FixtureFanInput) {
     const phone = normalizePhone(input.phone)
     if (!input.displayName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) || !phone) {
-      throw new ApiError(422, 'VALIDATION_FAILED', 'Enter a name, email and phone number including its country code.')
+      throw new ApiError(422, 'VALIDATION_FAILED', 'Enter a name, email and valid phone number.')
     }
-    db.fan = { ...db.fan, displayName: input.displayName.trim(), email: input.email.trim(), phone }
+    return { displayName: input.displayName.trim(), email: input.email.trim().toLowerCase(), phone }
+  }
+
+  function requireUniqueFanContact(accounts: Me[], details: ReturnType<typeof fanDetails>) {
+    if (accounts.some(account => account.email.trim().toLowerCase() === details.email ||
+      normalizePhone(account.phone ?? '') === details.phone)) {
+      throw new ApiError(409, 'FAN_ACCOUNT_EXISTS', 'A fan account already uses that email or phone number. Sign in to use it.')
+    }
+  }
+
+  function updateFan(db: Db, input: FixtureFanInput) {
+    const details = fanDetails(input)
+    requireUniqueFanContact(db.otherFans, details)
+    db.fan = { ...db.fan, ...details }
   }
 
   function requireGmail(value: string) {
@@ -172,7 +203,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
     const event = db.events.find(event => event.id === app.event.id) ?? notFound('Event')
     const version = app.interviewVersion
     return {
-      id: app.id, userId: app.applicant.id, event, profile: { ...db.fan, phone: app.phone || db.fan.phone },
+      id: app.id, userId: app.applicant.id, event, profile: db.fan,
       status: app.status, submittedAt: app.submittedAt, call: app.attempts.at(-1) ?? null,
       interviewVersion: { versionId: version.versionId, versionNumber: version.versionNumber, publishedAt: version.publishedAt },
       invitation: app.status === 'invited' ? { expiresAt: event.startsAt, capacityAvailable: capacityOf(db, event.id).accepted < event.capacity } : null,
@@ -188,26 +219,33 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
       db.signedOut = { ...db.signedOut, [role]: true }
     }),
     signInFixture: (role, contact) => call('write', db => {
-      const account = role === 'staff' ? db.me : db.fan
+      const accounts = role === 'staff' ? [db.me] : [db.fan, ...db.otherFans]
       const value = contact.value.trim()
-      let matches: boolean
+      let account: Me | undefined
       if (contact.kind === 'gmail') {
-        matches = requireGmail(value) === account.email.trim().toLowerCase()
+        const email = requireGmail(value)
+        account = accounts.find(candidate => candidate.email.trim().toLowerCase() === email)
       } else {
-        const digits = value.replace(/[\s().-]/g, '')
-        const phone = normalizePhone(/^\d{10}$/.test(digits) ? `+1${digits}` : value)
+        const phone = normalizePhone(value)
         if (!phone) {
           throw new ApiError(422, 'INVALID_PHONE', 'Enter a US phone number or include the country code.')
         }
-        matches = phone === account.phone
+        account = accounts.find(candidate => normalizePhone(candidate.phone ?? '') === phone)
       }
-      if (!matches) {
+      if (!account) {
         throw new ApiError(401, 'DEMO_ACCOUNT_NOT_FOUND', `No demo ${role} account matches those details.`)
+      }
+      if (role === 'fan' && account.id !== db.fan.id) {
+        db.otherFans = [db.fan, ...db.otherFans.filter(candidate => candidate.id !== account.id)]
+        db.fan = account
       }
       db.signedOut = { ...db.signedOut, [role]: false }
     }),
     signUpFixtureFan: input => call('write', db => {
-      updateFan(db, { ...input, email: requireGmail(input.email) })
+      const details = fanDetails({ ...input, email: requireGmail(input.email) })
+      requireUniqueFanContact([db.fan, ...db.otherFans], details)
+      db.otherFans.push(db.fan)
+      db.fan = { id: `fan_${crypto.randomUUID()}`, role: 'fan', ...details }
       db.signedOut = { ...db.signedOut, fan: false }
     }),
     getFanMe: () => fanCall('read', db => db.fan),
@@ -223,7 +261,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
       const unavailable = eventUnavailable(event, now().getTime())
       if (unavailable) throw new ApiError(409, 'APPLICATIONS_CLOSED', unavailable)
       if (!consent) throw new ApiError(422, 'CONSENT_REQUIRED', 'Agree to the AI interview before applying.')
-      if (!db.fan.phone || !normalizePhone(db.fan.phone)) throw new ApiError(422, 'PHONE_REQUIRED', 'Add a phone number including its country code.')
+      if (!db.fan.phone || !normalizePhone(db.fan.phone)) throw new ApiError(422, 'PHONE_REQUIRED', 'Add a valid phone number to your profile.')
       const duplicate = db.applications.find(app => app.applicant.id === db.fan.id && app.event.id === eventId)
       if (duplicate) throw new ApiError(409, 'ALREADY_APPLIED', 'You already have an application. Open My profile to view it.')
       const version = interviewOf(db, eventId).versions.at(-1)

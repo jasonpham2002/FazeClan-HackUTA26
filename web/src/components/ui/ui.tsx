@@ -6,10 +6,11 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { ApiError } from '../../api/client'
 import { Icon, type IconName } from './Icon'
 
-type Tone = 'neutral' | 'ok' | 'warn' | 'danger' | 'info' | 'accent'
+export type BadgeTone = 'neutral' | 'gray' | 'ok' | 'warn' | 'danger' | 'info' | 'accent'
 
-const dotClasses: Record<Tone, string> = {
+const dotClasses: Record<BadgeTone, string> = {
   neutral: 'border border-subtle',
+  gray: 'bg-neutral-500',
   ok: 'bg-ok',
   warn: 'bg-warn',
   danger: 'bg-danger',
@@ -21,7 +22,7 @@ const dotClasses: Record<Tone, string> = {
  * A status: a small colored dot plus a written label. The label always carries
  * the meaning; the dot is a secondary cue. Use `Tag` for plain keywords.
  */
-export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {
+export function Badge({ tone = 'neutral', children }: { tone?: BadgeTone; children: ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-[0.8125rem] font-medium whitespace-nowrap">
       <span aria-hidden="true" className={`size-2 rounded-full ${dotClasses[tone]}`} />
