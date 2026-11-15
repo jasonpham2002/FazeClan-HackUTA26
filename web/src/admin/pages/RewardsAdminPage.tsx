@@ -8,25 +8,78 @@ import { SampleBadge } from '../../fan/fazeid-ui'
 import { redemptionLabels, rewardKindLabels } from '../../fan/RewardsPage'
 import { formatDateTime } from '../../lib/format'
 
-const EMPTY: RewardInput = { title: '', description: '', kind: 'merch', cost: 50, stock: null, active: false, terms: '' }
+const EMPTY: RewardInput = {
+  headline: '', title: '', imageUrl: null, description: '', kind: 'merch', cost: 100, stock: 10, active: true,
+  terms: 'Simulation only. Nothing is shipped.',
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  for (let index = 0; index < bytes.length; index += 1) binary += String.fromCharCode(bytes[index]!)
+  return btoa(binary)
+}
 
 function RewardForm({ reward, onDone }: { reward: Reward | null; onDone: () => void }) {
   const queries = useQueryClient()
   const [draft, setDraft] = useState<RewardInput>(() => reward
-    ? { title: reward.title, description: reward.description, kind: reward.kind, cost: reward.cost, stock: reward.stock, active: reward.active, terms: reward.terms }
+    ? {
+      headline: reward.headline ?? '', title: reward.title, imageUrl: reward.imageUrl ?? null, description: reward.description,
+      kind: reward.kind, cost: reward.cost, stock: reward.stock, active: reward.active, terms: reward.terms,
+    }
     : EMPTY)
+  const [imageError, setImageError] = useState('')
+  const [uploading, setUploading] = useState(false)
   const save = useMutation({
     mutationFn: () => (reward ? api.updateReward(reward.id, draft) : api.createReward(draft)),
     onSuccess: onDone,
-    onSettled: () => queries.invalidateQueries({ queryKey: ['admin', 'rewards'] }),
+    onSettled: () => {
+      queries.invalidateQueries({ queryKey: ['admin', 'rewards'] })
+      queries.invalidateQueries({ queryKey: ['rewards'] })
+    },
   })
   const set = <K extends keyof RewardInput>(key: K, value: RewardInput[K]) => setDraft(current => ({ ...current, [key]: value }))
   const id = reward?.id ?? 'new'
+  async function onImage(file: File | undefined) {
+    setImageError('')
+    if (!file) return
+    if (!file.type.startsWith('image/') || file.size > 1_500_000) {
+      setImageError('Use a JPEG, PNG, GIF, or WebP image under 1.5 MB.')
+      return
+    }
+    setUploading(true)
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const uploaded = await api.uploadRewardImage({ contentType: file.type, dataBase64: bytesToBase64(bytes) })
+      set('imageUrl', uploaded.imageUrl)
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : 'The image was not saved.')
+    } finally {
+      setUploading(false)
+    }
+  }
   return (
-    <form className="grid gap-4 md:grid-cols-2" onSubmit={event => { event.preventDefault(); if (!save.isPending) save.mutate() }}>
-      <Field label="Title" htmlFor={`rw-title-${id}`}>
+    <form className="grid gap-4 md:grid-cols-2" onSubmit={event => { event.preventDefault(); if (!save.isPending && !uploading) save.mutate() }}>
+      <Field label="Headline" htmlFor={`rw-headline-${id}`} hint="The short line fans see first.">
+        <input id={`rw-headline-${id}`} value={draft.headline ?? ''} onChange={event => set('headline', event.target.value)} className={inputClass} />
+      </Field>
+      <Field label="Gift name" htmlFor={`rw-title-${id}`}>
         <input id={`rw-title-${id}`} required value={draft.title} onChange={event => set('title', event.target.value)} className={inputClass} />
       </Field>
+      <div className="space-y-3 md:col-span-2">
+        <Field label="Image" htmlFor={`rw-image-${id}`} hint="Upload a photo, or paste an https link.">
+          <input id={`rw-image-${id}`} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={event => void onImage(event.target.files?.[0])} className={inputClass} />
+        </Field>
+        <input
+          aria-label="Image link"
+          placeholder="https://"
+          value={draft.imageUrl ?? ''}
+          onChange={event => set('imageUrl', event.target.value || null)}
+          className={inputClass}
+        />
+        {draft.imageUrl && <img src={draft.imageUrl} alt="" className="h-28 w-28 rounded-lg border border-border object-cover" />}
+        {uploading && <p className="text-sm text-muted">Saving image…</p>}
+        {imageError && <p className="text-sm text-danger">{imageError}</p>}
+      </div>
       <Field label="Kind" htmlFor={`rw-kind-${id}`}>
         <select id={`rw-kind-${id}`} value={draft.kind} onChange={event => set('kind', event.target.value as RewardKind)} className={inputClass}>
           {Object.entries(rewardKindLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -37,7 +90,7 @@ function RewardForm({ reward, onDone }: { reward: Reward | null; onDone: () => v
           <textarea id={`rw-desc-${id}`} rows={2} value={draft.description} onChange={event => set('description', event.target.value)} className={inputClass} />
         </Field>
       </div>
-      <Field label="Cost in points" htmlFor={`rw-cost-${id}`}>
+      <Field label="Points to redeem" htmlFor={`rw-cost-${id}`}>
         <input id={`rw-cost-${id}`} type="number" min={1} step={1} required value={draft.cost} onChange={event => set('cost', Number(event.target.value))} className={inputClass} />
       </Field>
       <Field label="Stock" htmlFor={`rw-stock-${id}`} hint="Leave empty if it is not stock-limited.">
@@ -54,7 +107,7 @@ function RewardForm({ reward, onDone }: { reward: Reward | null; onDone: () => v
       </label>
       <div className="space-y-3 md:col-span-2">
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" variant="primary" disabled={save.isPending}>{save.isPending ? 'Saving…' : reward ? 'Save changes' : 'Add reward'}</Button>
+          <Button type="submit" variant="primary" disabled={save.isPending || uploading}>{save.isPending ? 'Saving…' : reward ? 'Save changes' : 'Add gift'}</Button>
           {reward && <Button disabled={save.isPending} onClick={onDone}>Cancel</Button>}
         </div>
         {save.isError && <ErrorState error={save.error} />}
@@ -75,7 +128,7 @@ export function RewardsAdminPage() {
       <header className="space-y-2">
         <h1 className="title-display text-4xl sm:text-5xl">Rewards</h1>
         <p className="max-w-[70ch] text-muted">
-          The catalogue fans can spend points on. These are proposed benefits for the concept; record a redemption’s status rather than implying anything shipped.
+          Add a gift with a headline, image, and point cost. Merchandise that is marked redeemable appears for fans.
         </p>
       </header>
 
@@ -89,12 +142,16 @@ export function RewardsAdminPage() {
                 <li key={reward.id} className="border-t border-border py-5 first:border-t-0">
                   {editing === reward.id ? <RewardForm reward={reward} onDone={() => setEditing(null)} /> : (
                     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                      <div className="min-w-0">
+                      <div className="flex min-w-0 gap-3">
+                        {reward.imageUrl && <img src={reward.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-lg border border-border object-cover" />}
+                        <div className="min-w-0">
+                        {reward.headline && <p className="text-sm font-semibold">{reward.headline}</p>}
                         <h3 className="font-bold">{reward.title}</h3>
                         <p className="text-sm text-muted">
                           {rewardKindLabels[reward.kind] ?? reward.kind} · {reward.cost} points · {reward.stock === null ? 'not stock-limited' : `${reward.stock} in stock`}
                         </p>
                         {reward.terms && <p className="text-sm text-subtle">{reward.terms}</p>}
+                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         {reward.isDemo && <SampleBadge />}
@@ -109,7 +166,7 @@ export function RewardsAdminPage() {
           )}
       </Section>
 
-      <Card title="Add a reward">
+      <Card title="Add a gift">
         <RewardForm key={added} reward={null} onDone={() => setAdded(count => count + 1)} />
         {added > 0 && <div className="mt-4"><Notice tone="ok">Reward added. It is in the catalogue above as read back from the server.</Notice></div>}
       </Card>

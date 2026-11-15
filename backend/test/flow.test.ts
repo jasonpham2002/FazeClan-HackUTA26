@@ -625,6 +625,8 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
       {
         id: unlimitedReward.id,
         title: 'Unlimited FaZe Sticker',
+        headline: '',
+        imageUrl: null,
         description: 'Not stock-limited.',
         kind: 'merch',
         terms: 'Proposed demo benefit',

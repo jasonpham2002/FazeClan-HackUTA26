@@ -262,6 +262,7 @@ export function createHttpClient(baseUrl: string): ApiClient {
     },
     listAdminRewards: async () => list(await request('GET', '/admin/rewards'), 'rewards'),
     createReward: async input => { await request('POST', '/admin/rewards', input) },
+    uploadRewardImage: input => request('POST', '/admin/rewards/images', input),
     updateReward: async (id, input) => { await request('PATCH', `/admin/rewards/${enc(id)}`, input) },
     listAdminRedemptions: async () => list(await request('GET', '/admin/redemptions'), 'redemptions'),
     getFanPoints: id => request('GET', `/admin/users/${enc(id)}/points`),

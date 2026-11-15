@@ -42,13 +42,15 @@ function RewardRow({ reward, balance, canRedeem }: { reward: Reward; balance: nu
   else if (short) blocked = `You need ${reward.cost - balance!} more points.`
 
   return (
-    <li className="grid gap-4 border-t border-border py-5 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-      <div className="min-w-0 space-y-1.5">
+    <li className="flex flex-col gap-4 border-t border-border py-5 first:border-t-0 sm:flex-row sm:items-start">
+      {reward.imageUrl && <img src={reward.imageUrl} alt="" className="h-28 w-28 shrink-0 rounded-lg border border-border object-cover" />}
+      <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h3 className="text-lg font-bold">{reward.title}</h3>
+          <h3 className="text-lg font-bold">{reward.headline || reward.title}</h3>
           <span className="text-sm text-muted">{rewardKindLabels[reward.kind] ?? reward.kind}</span>
           {reward.isDemo && <SampleBadge label="Proposed, sample" />}
         </div>
+        {reward.headline && reward.headline !== reward.title && <p className="font-semibold">{reward.title}</p>}
         <p className="text-muted">{reward.description}</p>
         <p className="text-sm text-subtle">{reward.terms}</p>
         <p className="text-sm">

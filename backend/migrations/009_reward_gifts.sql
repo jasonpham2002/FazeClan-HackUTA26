@@ -1,0 +1,3 @@
+ALTER TABLE rewards
+  ADD COLUMN IF NOT EXISTS headline text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS image_url text;

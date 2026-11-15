@@ -137,6 +137,8 @@ export interface ApiClient {
   listAdminRewards(): Promise<Reward[]>
   /** CONFIRM (Jason): POST /admin/rewards */
   createReward(input: RewardInput): Promise<void>
+  /** POST /admin/rewards/images — stores a staff-uploaded gift photo. */
+  uploadRewardImage(input: { contentType: string; dataBase64: string }): Promise<{ imageUrl: string }>
   /** CONFIRM (Jason): PATCH /admin/rewards/:id */
   updateReward(id: string, input: RewardInput): Promise<void>
   /** CONFIRM (Jason): GET /admin/redemptions — not in the proposed endpoint list. */

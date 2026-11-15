@@ -136,7 +136,7 @@ type FazeIdMethods = Pick<ApiClient,
   'listPlayers' | 'getPlayer' | 'getPlayerStats' | 'getPlayerSchedule' | 'listMatches' | 'getPlayerHighlights' |
   'getPlayerInsight' | 'listFollows' | 'setFollow' | 'listMarkets' | 'submitPick' | 'getMyPoints' | 'listRewards' |
   'redeemReward' | 'listMyRedemptions' | 'listAdminMarkets' | 'createMarket' | 'settleMarket' | 'listAdminRewards' |
-  'createReward' | 'updateReward' | 'listAdminRedemptions' | 'getFanPoints' | 'adjustFanPoints'>
+  'createReward' | 'uploadRewardImage' | 'updateReward' | 'listAdminRedemptions' | 'getFanPoints' | 'adjustFanPoints'>
 
 export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
   const fan = <T>(kind: 'read' | 'write', run: (db: Db) => T) => call(kind, run, 'fan')
@@ -169,7 +169,9 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
     if (!input.title.trim()) invalid('A reward needs a title.')
     if (!Number.isInteger(input.cost) || input.cost <= 0) invalid('Cost must be a positive whole number of points.')
     if (input.stock !== null && (!Number.isInteger(input.stock) || input.stock < 0)) invalid('Stock must be zero or more, or left empty.')
-    return { ...input, title: input.title.trim(), description: input.description.trim(), terms: input.terms.trim() }
+    const headline = (input.headline ?? '').trim()
+    const imageUrl = input.imageUrl?.trim() || null
+    return { ...input, title: input.title.trim(), headline, imageUrl, description: input.description.trim(), terms: input.terms.trim() }
   }
 
   const people = (db: Db) => [db.fan, ...db.otherFans, ...db.applications.map(app => app.applicant)]
@@ -289,6 +291,10 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
     }),
 
     listAdminRewards: () => staff('read', db => stateOf(db).rewards),
+    uploadRewardImage: input => staff('write', () => {
+      if (!input.dataBase64.trim()) invalid('Choose an image.')
+      return { imageUrl: `data:${input.contentType || 'image/png'};base64,${input.dataBase64}` }
+    }),
     createReward: input => staff('write', db => {
       stateOf(db).rewards.push({ ...cleanReward(input), id: `rwd_${crypto.randomUUID()}`, isDemo: true })
     }),
