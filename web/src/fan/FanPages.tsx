@@ -49,11 +49,11 @@ export function FanLayout() {
               <NavLink to="/sign-in"><Icon name="arrowRight" /> Sign in</NavLink>
             )}
           </nav>
-          {(fixture || (me.isSuccess && me.data.role === 'staff')) && (
-            <nav aria-label="Demo navigation" className="access-nav access-sidebar-bottom">
+          <div className="access-sidebar-bottom">
+            <nav aria-label="Demo navigation" className="access-nav">
               <Link to="/admin"><Icon name="dashboard" /> Staff dashboard</Link>
             </nav>
-          )}
+          </div>
         </>
       }
       account={me.isSuccess && <AccountMenu account={me.data} />}
@@ -88,7 +88,7 @@ export function FanEventPage() {
   const unavailable = eventUnavailable(event.data)
   return <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]"><section className="space-y-5"><Link to="/" className="text-sm text-muted underline">Back to events</Link><h1 className={pageTitle}>{event.data.title}</h1><p className="text-lg text-muted">{event.data.description}</p><p>{formatDateTime(event.data.startsAt, event.data.timezone)}<br />{event.data.location}</p><p className="text-sm text-muted">Apply, chat with an AI host, and watch for your invitation. Staff make the final decision.</p></section>
     <Card title={current ? 'Your application' : 'Apply for access'}>{me.isPending || (me.data?.role === 'fan' && apps.isPending) ? <LoadingState /> : me.isError ? <LoadError error={me.error} retry={() => me.refetch()} /> : apps.isError ? <ErrorState error={apps.error} onRetry={() => apps.refetch()} /> : me.data?.role === 'staff' ? <Notice>Sign in as a fan to apply.</Notice> : current ? <div className="space-y-4"><ApplicationStatusBadge status={current.status} /><p>{fanStatusText(current)}</p><Link to={`/applications/${current.id}`} className={linkButtonClass}>View application</Link></div> : unavailable ? <Notice tone="warn">{unavailable}</Notice> : <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!apply.isPending) apply.mutate() }}>
-      {fixture && <Notice tone="warn">Use fictional details. This is a shared demo account; no real call will be placed.</Notice>}
+      {fixture && <Notice tone="warn">Use fictional details for this demo application.</Notice>}
       <dl className="space-y-3"><div><dt className="text-sm text-muted">Applicant</dt><dd>{me.data?.displayName || me.data?.email}</dd></div><div><dt className="text-sm text-muted">FaceTime destination</dt><dd>{me.data?.phone || 'No number on profile'}</dd></div></dl><ProfileSettingsLink className="text-sm underline" />
       <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={consent} onChange={change => setConsent(change.target.checked)} disabled={apply.isPending} required /><span>I agree to receive an AI interview{fixture ? ' (simulated in this demo)' : ' over FaceTime'}. My answers will be transcribed for event-staff review.</span></label>
       {apply.isError && <ErrorState error={apply.error} />}<Button type="submit" variant="primary" disabled={apply.isPending || !me.data?.phone || !normalizePhone(me.data.phone)}>{apply.isPending ? 'Submitting…' : 'Submit application'}</Button>
@@ -107,7 +107,7 @@ export function FanApplicationPage() {
   const mutation = useMutation({ mutationFn: async (action: 'call' | 'accept' | 'missed' | 'completed') => {
     if (action === 'call' && fixture) {
       const phone = normalizePhone(app.data?.profile.phone || '')
-      if (!phone) throw new ApiError(422, 'PHONE_REQUIRED', 'Add a phone number including its country code.')
+      if (!phone) throw new ApiError(422, 'PHONE_REQUIRED', 'Add a valid phone number to your profile.')
       await placeProfileCall(id, phone)
     }
     if (action === 'call') return api.requestFanCall(id)

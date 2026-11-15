@@ -68,7 +68,8 @@ describe('fixture API', () => {
     expect(await api.getFanMe()).toMatchObject(profile)
 
     await api.signOut('fan')
-    await expect(api.signInFixture('fan', { kind: 'phone', value: '202-555-0123' })).rejects.toMatchObject({ code: 'DEMO_ACCOUNT_NOT_FOUND' })
+    await api.signInFixture('fan', { kind: 'phone', value: '202-555-0123' })
+    expect((await api.getFanMe()).displayName).toBe('Demo Fan')
     await api.signInFixture('fan', { kind: 'phone', value: '202-555-0125' })
     expect(await api.getFanMe()).toMatchObject(profile)
   })

@@ -47,6 +47,51 @@ describe('connected fan and staff fixture store', () => {
     await expect(api.acceptFanInvitation('app_jordan')).rejects.toMatchObject({ status: 404 })
   })
 
+  it('uses the current profile phone for interviews on existing applications', async () => {
+    const { api, reopen } = setup()
+    const id = await apply(api)
+    await api.setFixtureFan({ displayName: 'Demo Tester', email: 'tester@gmail.com', phone: '202-555-0198' })
+
+    expect((await reopen().getMyApplication(id)).profile.phone).toBe('+12025550198')
+  })
+
+  it('lets separate fan accounts apply for Dallas and keeps their applications separate', async () => {
+    const { api, reopen } = setup()
+    const first = { displayName: 'First Fan', email: 'first.fan@gmail.com', phone: '202-555-0198' }
+    const second = { displayName: 'Second Fan', email: 'second.fan@gmail.com', phone: '202-555-0199' }
+    await api.signUpFixtureFan(first)
+    const firstApplication = await apply(api)
+    await api.signOut('fan')
+    await api.signUpFixtureFan(second)
+
+    const fan = reopen()
+    expect(await fan.listMyApplications()).toEqual([])
+    await expect(fan.getMyApplication(firstApplication)).rejects.toMatchObject({ status: 404 })
+    const secondApplication = await apply(fan)
+    await fan.signInFixture('fan', { kind: 'phone', value: first.phone })
+    expect((await fan.listMyApplications()).map(app => app.id)).toEqual([firstApplication])
+    await fan.signInFixture('fan', { kind: 'gmail', value: second.email })
+    expect((await fan.listMyApplications()).map(app => app.id)).toEqual([secondApplication])
+    await expect(fan.signUpFixtureFan(first)).rejects.toMatchObject({ code: 'FAN_ACCOUNT_EXISTS' })
+  })
+
+  it('separates applications left by previous users of the shared demo profile', async () => {
+    const { api, storage, reopen } = setup()
+    const demo = await api.getFanMe()
+    const id = await apply(api)
+    const db = JSON.parse(storage.getItem(FIXTURE_DB_KEY)!)
+    delete db.otherFans
+    db.fan.email = 'new.fan@gmail.com'
+    db.fan.phone = '+12025550198'
+    storage.setItem(FIXTURE_DB_KEY, JSON.stringify(db))
+
+    const fan = reopen()
+    expect(await fan.listMyApplications()).toEqual([])
+    expect((await fan.getApplication(id)).id).toBe(id)
+    await fan.signInFixture('fan', { kind: 'gmail', value: demo.email })
+    expect((await fan.listMyApplications()).map(app => app.id)).toEqual([id])
+  })
+
   it('requires consent, prevents duplicate applications/calls, and permits missed-call retry', async () => {
     const { api } = setup()
     await expect(api.createFanApplication('evt_1', false)).rejects.toMatchObject({ code: 'CONSENT_REQUIRED' })
