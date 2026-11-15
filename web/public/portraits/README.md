@@ -8,5 +8,5 @@ Delete this folder once approved portraits arrive (they go in `web/public/player
 
 Additional roster photos:
 
-- `player_enkay-j.png` — Stephanie Lindgren / BLAST, from the [Enkay J interview](https://blast.tv/cs/news/enkay-j-on-neityu-i-believe-he-is-the-best-solution). Converted to PNG.
-- `player_broky.png` — BLAST Premier, [BLAST Backstage 2020 via Wikimedia Commons](https://commons.wikimedia.org/wiki/File:BLAST_Backstage_2020_FaZe_Clan_-_broky.jpg), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Converted to PNG.
+- `player_enkay-j.png` — Enkay J's FaZe Clan cutout, supplied by the project team.
+- `player_broky.png` — Broky's FaZe Clan cutout, supplied by the project team.
