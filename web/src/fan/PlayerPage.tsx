@@ -166,9 +166,9 @@ function StatRail({ stats, metric, onSelect }: { stats: PlayerStats; metric: Sta
               {key === 'headshotPercent' && value !== null && <span className="ml-0.5 text-2xl text-muted">%</span>}
             </span>
             <span className="text-xs text-subtle">
-              {value === null ? 'Unavailable from the source' : counted ? `Across ${counted} ${counted === 1 ? 'match' : 'matches'}` : 'Period total'}
+              {value === null ? 'Unavailable' : counted ? `Across ${counted} ${counted === 1 ? 'match' : 'matches'}` : 'Period total'}
             </span>
-            {definition && <span className="text-xs text-subtle">{definition}</span>}
+            {definition && <span className="text-xs text-subtle">{definition.replace(/hltv/ig, '').replace(/\s+/g, ' ').trim()}</span>}
             <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 transition-colors duration-150 ${selected ? 'bg-accent' : 'bg-transparent'}`} />
           </button>
         )
@@ -295,7 +295,12 @@ function AiAnalysis({ playerId, stats }: { playerId: string; stats: PlayerStats 
     body = <p className="text-sm text-muted">No analysis has been generated for these statistics yet.</p>
   } else {
     const data = insight.data
-    const refLabel = (ref: string) => statLabels[ref.replace('metrics.', '') as StatKey] ?? ref
+    const extraLabels: Record<string, string> = {
+      'metrics.kastPercent': 'KAST',
+      'metrics.killsPerRound': 'Kills per round',
+      'metrics.deathsPerRound': 'Deaths per round',
+    }
+    const refLabel = (ref: string) => extraLabels[ref] ?? statLabels[ref.replace('metrics.', '') as StatKey] ?? ref
     body = (
       <div className="space-y-4">
         {data.isDemo && <SampleBadge label="Placeholder text, not a real AI result" />}
@@ -318,7 +323,7 @@ function AiAnalysis({ playerId, stats }: { playerId: string; stats: PlayerStats 
             <ul className="mt-1 list-disc space-y-0.5 pl-4">{data.limitations.map(item => <li key={item}>{item}</li>)}</ul>
           </div>
         )}
-        <p className="text-xs text-subtle">Generated {formatDateTime(data.generatedAt)} from the statistics shown here.</p>
+        <p className="text-xs text-subtle">Meta AI · {formatDateTime(data.generatedAt)}</p>
       </div>
     )
   }
@@ -326,7 +331,7 @@ function AiAnalysis({ playerId, stats }: { playerId: string; stats: PlayerStats 
     <aside aria-labelledby="ai-analysis-title" className="rounded-xl border border-border bg-surface p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 id="ai-analysis-title" className="heading-section">Player analysis</h3>
-        <span className="rounded-md border border-info/40 bg-info/10 px-2 py-0.5 text-xs font-semibold text-info">AI-generated</span>
+        <span className="rounded-md border border-info/40 bg-info/10 px-2 py-0.5 text-xs font-semibold text-info">Meta AI</span>
       </div>
       {body}
     </aside>
@@ -367,7 +372,7 @@ function Analytics({ player }: { player: Player }) {
   return (
     <Section
       title="Performance"
-      meta={`${data.period.label} · ${data.period.start && data.period.end ? `${formatDate(data.period.start)} to ${formatDate(data.period.end)}` : 'Date range not supplied by source'}${data.mapsPlayed !== null ? ` · ${data.mapsPlayed} maps` : ''}`}
+      meta={`${data.period.label.replace(/hltv/ig, '').replace(/\s+/g, ' ').trim()}${data.period.start && data.period.end ? ` · ${formatDate(data.period.start)} to ${formatDate(data.period.end)}` : ''}${data.mapsPlayed !== null ? ` · ${data.mapsPlayed} maps` : ''}`}
       actions={data.isDemo ? <SampleBadge label="Demo numbers — not real statistics" /> : undefined}
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
@@ -409,20 +414,7 @@ function Analytics({ player }: { player: Player }) {
         </div>
         <AiAnalysis playerId={player.id} stats={data} />
       </div>
-      <p className="mt-5 text-sm text-subtle">
-        Snapshot collected {formatDateTime(data.retrievedAt)}.{' '}
-        {data.sourceUpdatedAt ? <>Source updated {formatDateTime(data.sourceUpdatedAt)}.</> : 'Source update time is unverified.'}{' '}
-        {data.sources.length > 0
-          ? <>Sources: {data.sources.map((source, index) => (
-              <span key={source.id}>{index > 0 && ', '}<a href={source.url} target="_blank" rel="noreferrer" className={linkClass}>{source.label ?? new URL(source.url).hostname}</a></span>
-            ))}.</>
-          : 'No source links were supplied with this snapshot.'}
-      </p>
-      {!!data.limitations?.length && (
-        <ul aria-label="Data limitations" className="mt-3 list-disc space-y-1 pl-5 text-xs text-subtle">
-          {data.limitations.map((limitation, index) => <li key={index}>{limitation}</li>)}
-        </ul>
-      )}
+      <p className="mt-5 text-sm text-subtle">Numbers updated {formatDateTime(data.retrievedAt)}.</p>
     </Section>
   )
 }
