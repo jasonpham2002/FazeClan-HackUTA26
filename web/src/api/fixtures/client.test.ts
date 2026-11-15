@@ -18,6 +18,61 @@ function setup(failure: { status: number | null } = { status: null }) {
 }
 
 describe('fixture API', () => {
+  it('signs fan and staff out independently while preserving demo records', async () => {
+    const { api, reopen } = setup()
+    const fan = await api.getFanMe()
+    const staff = await api.getMe()
+    const events = await api.listAdminEvents()
+
+    await api.signOut('fan')
+    const anotherTab = reopen()
+    await expect(anotherTab.getFanMe()).rejects.toMatchObject({ status: 401 })
+    await expect(anotherTab.listMyApplications()).rejects.toMatchObject({ status: 401 })
+    expect(await anotherTab.getMe()).toEqual(staff)
+    expect(await anotherTab.listFanEvents()).not.toHaveLength(0)
+
+    await anotherTab.signOut('staff')
+    await expect(api.listAdminEvents()).rejects.toMatchObject({ status: 401 })
+    await expect(api.getApplication('app_maya')).rejects.toMatchObject({ status: 401 })
+    await api.signInFixture('fan', { kind: 'gmail', value: fan.email.toUpperCase() })
+    expect(await anotherTab.getFanMe()).toEqual(fan)
+    await expect(anotherTab.getMe()).rejects.toMatchObject({ status: 401 })
+
+    await api.signInFixture('staff', { kind: 'phone', value: '(202) 555-0124' })
+    expect(await anotherTab.getMe()).toEqual(staff)
+    expect(await anotherTab.listAdminEvents()).toEqual(events)
+  })
+
+  it('rejects valid but unregistered contacts and contacts from the wrong role', async () => {
+    const { api } = setup()
+    const fan = await api.getFanMe()
+    const staff = await api.getMe()
+    await api.signOut('fan')
+    await api.signOut('staff')
+    await expect(api.signInFixture('fan', { kind: 'phone', value: '123' })).rejects.toMatchObject({ status: 422 })
+    await expect(api.signInFixture('fan', { kind: 'gmail', value: 'fan@example.test' })).rejects.toMatchObject({ status: 422 })
+    await expect(api.signInFixture('fan', { kind: 'phone', value: '+44 7700 900123' })).rejects.toMatchObject({ code: 'DEMO_ACCOUNT_NOT_FOUND' })
+    await expect(api.signInFixture('fan', { kind: 'gmail', value: staff.email })).rejects.toMatchObject({ code: 'DEMO_ACCOUNT_NOT_FOUND' })
+    await expect(api.signInFixture('staff', { kind: 'gmail', value: fan.email })).rejects.toMatchObject({ code: 'DEMO_ACCOUNT_NOT_FOUND' })
+    await expect(api.getFanMe()).rejects.toMatchObject({ status: 401 })
+    await expect(api.getMe()).rejects.toMatchObject({ status: 401 })
+    await api.signInFixture('staff', { kind: 'gmail', value: staff.email })
+    expect(await api.getMe()).toEqual(staff)
+  })
+
+  it('keeps the signed-up fan profile when signing back in with one contact field', async () => {
+    const { api } = setup()
+    const profile = { displayName: 'Alex Chen', email: 'alex.chen@gmail.com', phone: '+12025550125' }
+    await api.signOut('fan')
+    await api.signUpFixtureFan(profile)
+    expect(await api.getFanMe()).toMatchObject(profile)
+
+    await api.signOut('fan')
+    await expect(api.signInFixture('fan', { kind: 'phone', value: '202-555-0123' })).rejects.toMatchObject({ code: 'DEMO_ACCOUNT_NOT_FOUND' })
+    await api.signInFixture('fan', { kind: 'phone', value: '202-555-0125' })
+    expect(await api.getFanMe()).toMatchObject(profile)
+  })
+
   it('publishes a new immutable version and leaves existing applications pinned', async () => {
     const { api } = setup()
     const before = await api.getInterview('evt_1')

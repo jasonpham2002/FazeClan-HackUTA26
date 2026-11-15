@@ -6,8 +6,9 @@ import { EventEditorPage } from './admin/pages/EventEditorPage'
 import { InterviewEditorPage } from './admin/pages/InterviewEditorPage'
 import { OverviewPage } from './admin/pages/OverviewPage'
 import { DemoBanner } from './components/ui/DemoBanner'
+import { FanSignUpPage, SignInPage } from './components/ui/SignInPage'
 import { EmptyState } from './components/ui/ui'
-import { FanLayout, FanEventsPage, FanEventPage, FanApplicationPage, FanProfilePage, FanSignInPage } from './fan/FanPages'
+import { FanLayout, FanEventsPage, FanEventPage, FanApplicationPage, FanProfilePage, FanProfileEditPage } from './fan/FanPages'
 
 export default function App() {
   return (
@@ -20,7 +21,9 @@ export default function App() {
           <Route path="/events/:id" element={<FanEventPage />} />
           <Route path="/applications/:id" element={<FanApplicationPage />} />
           <Route path="/profile" element={<FanProfilePage />} />
-          <Route path="/sign-in" element={<FanSignInPage />} />
+          <Route path="/profile/edit" element={<FanProfileEditPage />} />
+          <Route path="/sign-in" element={<SignInPage />} />
+          <Route path="/sign-up" element={<FanSignUpPage />} />
         </Route>
 
         {/* Staff routes (Khoi) */}
