@@ -9,8 +9,9 @@ One Vite + React + TypeScript app for both audiences:
 
 ```bash
 npm ci
-npm run dev -- --port 5189 --strictPort  # http://localhost:5189/ (fans), /admin (staff)
+npm run dev -- --host 127.0.0.1 --port 5189 --strictPort  # http://127.0.0.1:5189/ (fans), /admin (staff)
 npm run test       # unit tests
+npm run lint       # oxlint
 npm run build      # type-check + production build
 ```
 
