@@ -35,7 +35,7 @@ export function MarketCard({ market }: { market: PredictionMarket }) {
           <h3 className="font-bold">{market.type === 'match_winner' ? 'Who wins?' : 'Where do they finish?'}</h3>
           <p className="text-sm text-muted">{market.title}</p>
         </div>
-        <PickStateBadge state={state} />
+        <div className="flex flex-wrap items-center gap-2">{market.isDemo && <SampleBadge label="Demo prediction" />}<PickStateBadge state={state} /></div>
       </div>
       <p className="mt-2 text-sm">
         Free to enter. A correct pick earns <strong>{market.award} points</strong>.
@@ -171,7 +171,7 @@ export function MatchesPage() {
                 : <p className="text-sm text-muted">No upcoming matches are listed.</p>}
             </Section>
             {tournamentMarkets.length > 0 && (
-              <Section title="Tournament predictions">
+              <Section title="More predictions">
                 <div className="grid gap-4 lg:grid-cols-2">{tournamentMarkets.map(market => <MarketCard key={market.id} market={market} />)}</div>
               </Section>
             )}

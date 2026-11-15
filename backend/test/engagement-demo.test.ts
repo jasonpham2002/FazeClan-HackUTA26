@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { test } from 'node:test';
+import { createPool } from '../src/db.ts';
+import { migrate,dropTestSchema } from '../src/migrate.ts';
+import { loadConfig } from '../src/config.ts';
+import { buildApp } from '../src/server.ts';
+import { seedEngagement } from '../src/seed-engagement.ts';
+test('pitch demo awards once and redeems once; reseeding preserves picks, stock and balances',async context=>{
+ const schema=`faze_test_${randomUUID().replaceAll('-','')}`;
+ const db=createPool(process.env.DATABASE_URL??'',schema);
+ const inbox=new Map<string,string>();
+ const app=buildApp({...loadConfig(),schema},db,async(email,url)=>{inbox.set(email,url)});
+ context.after(async()=>{await app.close();try{await dropTestSchema(db,schema)}finally{await db.end()}});
+ await migrate(db,schema);
+ const demo=await seedEngagement(db);assert.equal((await seedEngagement(db)).marketId,demo.marketId);
+ async function signIn(email:string){
+  const start=await app.inject({method:'POST',url:'/api/auth/sign-in/magic-link',payload:{email}});assert.equal(start.statusCode,200);
+  const link=new URL(inbox.get(email)!);
+  const response=await app.inject(link.pathname+link.search);
+  const cookie=response.cookies.filter(c=>c.value).map(c=>`${c.name}=${c.value}`).join('; ');assert.ok(cookie);return cookie;
+ }
+ const fan=await signIn('pitch-fan@example.test');const staff=await signIn('pitch-staff@example.test');
+ const get=async(path:string,cookie=fan)=>(await app.inject({url:path,headers:{cookie}})).json();
+ const post=(url:string,payload:object,cookie=fan)=>app.inject({method:'POST',url,payload,headers:{cookie}});
+ assert.equal((await get('/me/points')).balance,0);
+ const key=randomUUID();
+ assert.equal((await post(`/rewards/${demo.rewardId}/redeem`,{idempotencyKey:key})).statusCode,409);
+ assert.equal((await post(`/predictions/markets/${demo.marketId}/pick`,{optionId:'faze'})).statusCode,201);
+ assert.equal((await post(`/predictions/markets/${demo.marketId}/pick`,{optionId:'practice'})).statusCode,409);
+ const settle={optionId:'faze',sourceUrl:'https://github.com/jasonpham2002/FazeClan-HackUTA26/blob/main/backend/DEMO.md'};
+ const settleUrl=`/admin/prediction-markets/${demo.marketId}/settle`;
+ assert.equal((await post(settleUrl,settle)).statusCode,403);
+ assert.equal((await post(settleUrl,settle,staff)).statusCode,200);
+ assert.equal((await post(settleUrl,settle,staff)).statusCode,200);
+ assert.equal((await get('/me/points')).balance,100);
+ const url=`/rewards/${demo.rewardId}/redeem`;
+ const first=await post(url,{idempotencyKey:key});assert.equal(first.statusCode,201);
+ const replay=await post(url,{idempotencyKey:key});assert.equal(replay.statusCode,200);assert.equal(replay.json().id,first.json().id);
+ assert.equal((await get('/me/points')).balance,0);
+ assert.equal((await get('/me/redemptions')).redemptions.length,1);
+ await seedEngagement(db);
+ const reward=(await get('/rewards')).rewards.find((r:{id:string})=>r.id===demo.rewardId);assert.equal(reward.stock,49);
+ assert.equal((await get('/me/points')).entries.length,2);
+ assert.notEqual((await seedEngagement(db,'pitch-2')).marketId,demo.marketId);
+});
