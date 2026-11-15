@@ -17,7 +17,8 @@
     "import:esports": "node --env-file-if-exists=.env src/esports-data.ts",
     "verify:deployment": "node src/verify-deployment.ts",
     "import:calendar": "node --env-file-if-exists=.env src/esports-calendar.ts",
-    "seed:engagement": "node --env-file-if-exists=.env src/seed-engagement.ts"
+    "seed:engagement": "node --env-file-if-exists=.env src/seed-engagement.ts",
+    "verify:site": "node src/verify-site.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",

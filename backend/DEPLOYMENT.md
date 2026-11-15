@@ -65,3 +65,34 @@ This command only reads public endpoints; it needs no credentials. It verifies t
 `GET /health` returns `status: "ok"`, `apiVersion: "faze-id-v1"` and the player/prediction/points/reward capabilities only when all required core tables and the player engagement view exist. This distinguishes the updated API from the earlier events-only service. It checks database readiness, not the running worker, SMTP delivery, YouTube integration or AI provider availability.
 
 Migration 011 connects `engagement_players` to the real imported roster, allowing follow requests to validate sourced player IDs. Migration 012 adds match/tournament storage, source-attributed calendar routes and prediction reference views. The calendar bundle includes one upcoming fixture, one recent result, and two tournament records. Import it after the roster. It never settles a market automatically.
+
+## Domain sign-in loop: confirmed deployment mismatch
+
+A live check found the domain frontend fetching `http://104.238.146.107:3001/me`, while `/api/me` and `/admin` on the domain returned backend 404 JSON. This combines a cross-site cookie request with incorrect proxy paths. Merging the Vite preview proxy does not update Nginx or change an already compiled API base URL.
+
+On Vultr, preserve the existing secrets, database/schema, and other required origins; update backend `.env`:
+
+```dotenv
+PUBLIC_BASE_URL=http://manilovefaze.club
+APP_ORIGINS=http://manilovefaze.club,http://104.238.146.107
+```
+
+Build the frontend with explicit settings (these override any stale Vite environment files):
+
+```sh
+cd web
+VITE_DATA_SOURCE=live VITE_API_BASE_URL=/api npm run build
+```
+
+For Nginx, adapt [nginx-domain.conf.example](nginx-domain.conf.example) in the **existing active domain server block**. Replace its root with the real absolute `web/dist` path. Remove competing locations that proxy `/admin` or all page routes to port 3001. If the frontend is intentionally served through Vite preview instead of static files, keep the existing frontend upstream for page routes and apply the two API locations from the example. Do not run two services competing for port 80.
+
+After editing the actual active configuration, run `sudo nginx -t` and reload Nginx only if validation succeeds. Restart the API through its existing process manager so `PUBLIC_BASE_URL` and `APP_ORIGINS` take effect. Then:
+
+```sh
+cd backend
+npm run verify:site -- http://manilovefaze.club
+```
+
+This checks domain page routes, API prefix stripping, auth prefix preservation, and stale IP references in the built JavaScript. It is read-only and does not request or expose email tokens. It is not a substitute for opening a newly requested magic link: old links retain the old callback/base URL. Use the domain consistently in the same browser, then verify `/api/me` returns the signed-in user and refreshing `/profile` preserves the session.
+
+At the time of diagnosis HTTPS on port 443 was unavailable. These examples therefore match the currently working HTTP origin. If TLS is enabled, update both public URLs/origins to HTTPS and apply the route rules to the TLS server block as well.

@@ -1,0 +1,29 @@
+# Adapt the existing server block; do not add a competing server for the same name.
+# Replace root with the absolute web/dist path from the deployed checkout.
+server {
+    listen 80;
+    server_name manilovefaze.club;
+    root /REPLACE_WITH_DEPLOYED_CHECKOUT/web/dist;
+    index index.html;
+
+    # Auth keeps its /api/auth prefix, callback query string, and Set-Cookie headers.
+    location ^~ /api/auth/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # The trailing slash removes /api/ for ordinary backend routes.
+    location ^~ /api/ {
+        proxy_pass http://127.0.0.1:3001/;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # /admin, /profile, /sign-in, etc. are browser pages, not backend routes.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
