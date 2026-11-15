@@ -168,8 +168,8 @@ function InterviewEditor({
         )}
         {dirty && <p className="text-muted">Save the draft before publishing. Unsaved edits exist only on this page.</p>}
         <p className="text-muted">
-          Publishing creates a new version that cannot be edited. Applications already submitted keep the version they
-          were given; later edits start a new draft.
+          Set the event to Published in Event details to list it on the fan page. Publishing here creates a new
+          interview version. Applications already submitted keep their original version.
         </p>
       </div>
 

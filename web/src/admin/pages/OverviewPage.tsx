@@ -184,7 +184,7 @@ function AnalyticsView({ data }: { data: Analytics }) {
               <span className="text-muted">{label}</span>
               <span className="h-2 rounded-full bg-surface-2" aria-hidden="true">
                 <span
-                  className="block h-2 rounded-full bg-text/70"
+                  className="block h-2 rounded-full bg-accent"
                   style={{ width: `${(value / max) * 100}%`, minWidth: value > 0 ? '0.5rem' : 0 }}
                 />
               </span>

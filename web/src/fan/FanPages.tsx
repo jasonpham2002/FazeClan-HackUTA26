@@ -5,6 +5,7 @@ import { api, ApiError, dataSource } from '../api'
 import type { FixtureFanInput } from '../api/types'
 import logo from '../assets/brand/faze-logo-on-dark.png'
 import { ApplicationStatusBadge, CallStatusBadge } from '../components/ui/StatusBadge'
+import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { Button, Card, EmptyState, ErrorState, Field, inputClass, linkButtonClass, LoadingState, Notice } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
 import { canRequestCall, eventUnavailable, fanStatusText, normalizePhone } from './logic'
@@ -27,9 +28,12 @@ export function FanLayout() {
   return <>
     <a href="#fan-main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-surface focus:p-4">Skip to content</a>
     <header className="border-b border-border bg-surface"><div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4 sm:px-6">
-      <Link to="/" className="flex items-center gap-4"><img src={logo} alt="FaZe Clan" className="h-10 w-auto" width="60" height="40" /><span className="title-display text-xl">Access</span></Link>
+      <Link to="/" className="flex items-center gap-4"><span className="faze-logo"><img src={logo} alt="FaZe Clan" className="h-10 w-auto" width="60" height="40" /></span><span className="title-display text-xl">Access</span></Link>
       <nav aria-label="Fan navigation" className="flex flex-wrap gap-5 text-sm"><NavLink to="/" end>Events</NavLink><NavLink to="/profile">My profile</NavLink><NavLink to="/sign-in">{fixture ? 'Demo profile' : 'Sign in'}</NavLink></nav>
-      {(fixture || me.data?.role === 'staff') && <Link to="/admin" className={`${linkButtonClass} ml-auto`}>Staff dashboard</Link>}
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+        {(fixture || me.data?.role === 'staff') && <Link to="/admin" className={linkButtonClass}>Staff dashboard</Link>}
+        <ThemeToggle />
+      </div>
     </div></header>
     <main id="fan-main" tabIndex={-1} className="mx-auto min-h-[70vh] max-w-7xl px-4 py-8 sm:px-6"><Outlet /></main>
     <footer className="mx-auto max-w-7xl border-t border-border px-4 py-6 text-sm text-muted sm:px-6">Independent concept for FaZe Clan · Event admission is reviewed by staff.</footer>
