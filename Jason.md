@@ -4,7 +4,7 @@
 
 Own the application backbone: secure authentication, persistent records, published question versions, reliable call orchestration, review decisions, and the deployed environment.
 
-Collaborators: Johnny owns the real-time AI agent; Minh owns fan pages; Khoi owns staff pages. Deadline: 24 hours.
+Collaborators: Minh and Tuong own the real-time AI agent; Johnny owns fan pages; Khoi owns staff pages. Deadline: 24 hours.
 
 Repository: https://github.com/jasonpham2002/FazeClan-HackUTA26
 
@@ -27,7 +27,7 @@ Agree with all teammates on:
 - JSON field names, timestamp format (UTC ISO 8601), and ID representation.
 - Response and error envelopes.
 - Application/call statuses below.
-- Who initiates Chert calls: your worker, with Johnny supplying agent integration.
+- Who initiates Chert calls: your worker, with Minh supplying agent integration.
 - How frontend contributors obtain safe fixtures before APIs are ready.
 
 Suggested errors: `{ "error": { "code": "CALL_ALREADY_ACTIVE", "message": "A call is already in progress." } }`. Never expose provider credentials or internal stack traces.
@@ -90,7 +90,7 @@ All paths are proposed application endpoints, not Chert API endpoints.
 
 Wire auth routes using the selected auth library rather than inventing an incomplete verification system. Email magic-link login is sufficient for fan authentication. Collect phone separately; for the demo restrict dialing to verified or preapproved consenting teammates. Do not claim unverified phone ownership.
 
-Question configuration shape shared with Johnny and Khoi:
+Question configuration shape shared with Minh and Khoi:
 
 ```json
 {
@@ -108,7 +108,7 @@ Question configuration shape shared with Johnny and Khoi:
 1. Claim a persisted job using a lease so restarts do not lose it.
 2. Recheck application eligibility and create/load the intended attempt.
 3. Create an isolated LiveKit room and short-lived credentials.
-4. Supply Johnny's agent the pinned interview configuration and correlation IDs.
+4. Supply Minh's agent the pinned interview configuration and correlation IDs.
 5. Invoke documented Chert outbound behavior through a provider adapter.
 6. Persist the provider call ID and consume available lifecycle events; use documented polling if necessary.
 7. Persist incremental transcript events and validated final results.
@@ -151,7 +151,7 @@ Seed one upcoming event, four questions, several demo profiles with clearly mark
 |---|---|
 | 0–2 | Contracts, database/auth choice, deployed health endpoint |
 | 2–6 | Schema, seeds, auth, events, applications, question versions |
-| 6–10 | Persistent call jobs and Johnny's transcript/result integration |
+| 6–10 | Persistent call jobs and Minh's transcript/result integration |
 | 10–14 | Review details, decisions, invitation acceptance |
 | 14–18 | Analytics, retries, access controls, restart behavior |
 | 18–21 | End-to-end checks with all contributors |
@@ -172,4 +172,4 @@ Out of scope: multiple databases, microservice orchestration, complex permission
 
 ## Related assignments
 
-[Project overview](README.md) | [Johnny](Johnny.md) | [Jason](Jason.md) | [Minh](Minh.md) | [Khoi](Khoi.md)
+[Project overview](README.md) | [Minh](Johnny.md) | [Jason](Jason.md) | [Johnny](Minh.md) | [Khoi](Khoi.md)

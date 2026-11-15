@@ -1,0 +1,625 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "scenarios": {
+    "fresh": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": null
+    },
+    "signed_out": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": null,
+      "application": null
+    },
+    "closed": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "closed",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": null
+    },
+    "deadline_passed": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3,
+        "applicationDeadline": "2020-01-01T00:00:00Z"
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": null
+    },
+    "full": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "full",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": null
+    },
+    "ready": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "interview_pending",
+        "call": null
+      }
+    },
+    "dialing": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "interview_pending",
+        "call": {
+          "status": "dialing"
+        }
+      }
+    },
+    "connected": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "interview_pending",
+        "call": {
+          "status": "connected"
+        }
+      }
+    },
+    "missed": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "interview_pending",
+        "call": {
+          "status": "missed"
+        }
+      }
+    },
+    "processing": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "interview_pending",
+        "call": {
+          "status": "completed",
+          "processingStatus": "pending"
+        }
+      }
+    },
+    "processing_failed": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "review_pending",
+        "call": {
+          "status": "completed",
+          "processingStatus": "failed"
+        }
+      }
+    },
+    "review": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "review_pending",
+        "call": {
+          "status": "completed",
+          "processingStatus": "ready"
+        }
+      }
+    },
+    "invited": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "invited",
+        "call": {
+          "status": "completed",
+          "processingStatus": "ready"
+        },
+        "invitation": {
+          "expiresAt": null,
+          "capacityAvailable": true
+        }
+      }
+    },
+    "expired": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "invited",
+        "call": null,
+        "invitation": {
+          "expiresAt": "2020-01-01T00:00:00Z",
+          "capacityAvailable": true
+        }
+      }
+    },
+    "capacity_claimed": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "invited",
+        "call": null,
+        "invitation": {
+          "expiresAt": null,
+          "capacityAvailable": false
+        }
+      }
+    },
+    "waitlisted": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "waitlisted",
+        "call": null
+      }
+    },
+    "accepted": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "accepted",
+        "call": null
+      }
+    }
+  },
+  "errors": {
+    "unauthorized": {
+      "status": 401,
+      "body": {
+        "error": {
+          "code": "UNAUTHORIZED",
+          "message": "Sign in required."
+        }
+      }
+    },
+    "forbidden": {
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Application access denied."
+        }
+      }
+    },
+    "duplicate_call": {
+      "status": 409,
+      "body": {
+        "error": {
+          "code": "CALL_ALREADY_ACTIVE",
+          "message": "A call is already in progress."
+        }
+      }
+    },
+    "invitation_expired": {
+      "status": 409,
+      "body": {
+        "error": {
+          "code": "INVITATION_EXPIRED",
+          "message": "Your invitation has expired."
+        }
+      }
+    },
+    "capacity_claimed": {
+      "status": 409,
+      "body": {
+        "error": {
+          "code": "CAPACITY_FULL",
+          "message": "All available spots have been claimed."
+        }
+      }
+    },
+    "rate_limited": {
+      "status": 429,
+      "body": {
+        "error": {
+          "code": "RATE_LIMITED",
+          "message": "Please wait before trying again."
+        }
+      }
+    }
+  }
+}

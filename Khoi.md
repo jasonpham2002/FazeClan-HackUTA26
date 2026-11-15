@@ -4,7 +4,7 @@
 
 Build the staff experience that makes the FaceTime call useful: configure an event interview, inspect what applicants actually said, see relevant activity, and issue Invite/Waitlist decisions.
 
-Collaborators: Jason owns data/APIs/auth; Johnny owns the agent and result structure; Minh owns fan pages and shared styling. Deadline: 24 hours.
+Collaborators: Jason owns data/APIs/auth; Minh and Tuong own the agent and result structure; Johnny owns fan pages and shared styling. Deadline: 24 hours.
 
 Repository: https://github.com/jasonpham2002/FazeClan-HackUTA26
 
@@ -14,7 +14,7 @@ Repository checked: the remote currently contains only README.md. The architectu
 
 Prioritize the application detail screen. A reviewer should be able to see the event's configured questions, corresponding applicant answers, supporting transcript, activity history, and a decision panel without navigating through unrelated pages.
 
-Use the same typography, spacing, colors, and status components as Minh. Make dense staff data readable on desktop; ensure basic tablet usability.
+Use the same typography, spacing, colors, and status components as Johnny. Make dense staff data readable on desktop; ensure basic tablet usability.
 
 Suggested routes:
 
@@ -58,7 +58,7 @@ Provide add, delete, edit, and move-up/move-down controls. Drag-and-drop is opti
 
 Allow fans to be new; these are conversation prompts, not an obscure-trivia exam.
 
-Suggested frontend validation, matched by Jason: 1–6 questions, nonempty prompts, duration 60–300 seconds, follow-ups 0–2. These are proposed demo limits, not provider restrictions; agree them with Johnny and Jason.
+Suggested frontend validation, matched by Jason: 1–6 questions, nonempty prompts, duration 60–300 seconds, follow-ups 0–2. These are proposed demo limits, not provider restrictions; agree them with Minh and Jason.
 
 **Save draft** and **Publish** are separate actions. Show version number, unsaved changes, and published timestamp. Publishing creates an immutable version; existing applications retain their original version. After publication, later edits start a new draft. Make that behavior visible to staff.
 
@@ -91,7 +91,7 @@ For each configured question show:
 - Expandable supporting transcript excerpts.
 - Missing evidence explicitly, rather than a fabricated summary.
 
-Show overall interview summary, stated interests, call duration, processing status, and attempts. Let staff inspect a partial transcript if extraction failed. Use Johnny's segment references to jump to evidence.
+Show overall interview summary, stated interests, call duration, processing status, and attempts. Let staff inspect a partial transcript if extraction failed. Use Minh's segment references to jump to evidence.
 
 Treat transcript and model output as untrusted text: render escaped text, not raw HTML. Distinguish agent statements from applicant statements.
 
@@ -135,7 +135,7 @@ Question configuration:
 }
 ```
 
-Agree response shapes with Jason during hour one. Ask Johnny for a representative result fixture by hour six. Build initially against explicit fixtures and replace them in the live flow; never turn an API failure into fake saved data.
+Agree response shapes with Jason during hour one. Ask Minh for a representative result fixture by hour six. Build initially against explicit fixtures and replace them in the live flow; never turn an API failure into fake saved data.
 
 Route guards improve UX, but Jason must enforce staff access on the backend. Handle 401/403 cleanly. Refreshing a detail page should reconstruct it entirely from persisted data.
 
@@ -157,7 +157,7 @@ Jason owns calculations. You own labels, readable display, denominator explanati
 
 | Hours | Deliverable |
 |---|---|
-| 0–2 | Shared styling with Minh; contracts with Jason; review fixture layout |
+| 0–2 | Shared styling with Johnny; contracts with Jason; review fixture layout |
 | 2–6 | Application detail shell, list, and question editor against fixtures |
 | 6–10 | Live published questions and live interview-result display |
 | 10–14 | Invite/waitlist decisions and event editor |
@@ -171,7 +171,7 @@ Jason owns calculations. You own labels, readable display, denominator explanati
 - [ ] An application shows its pinned interview version after later edits.
 - [ ] Each answer is tied to the correct question and actual transcript evidence.
 - [ ] Missing answers and failed processing are clearly visible.
-- [ ] Invite/waitlist survives refresh and appears on Minh's fan page.
+- [ ] Invite/waitlist survives refresh and appears on Johnny's fan page.
 - [ ] Historical activity is sourced; synthetic records are marked.
 - [ ] Dashboard counts match Jason's persisted aggregates.
 - [ ] A fan session cannot access staff data.
@@ -185,4 +185,4 @@ Out of scope: complex RBAC, automated rejection, authenticity scoring, rewards c
 
 ## Related assignments
 
-[Project overview](README.md) | [Johnny](Johnny.md) | [Jason](Jason.md) | [Minh](Minh.md) | [Khoi](Khoi.md)
+[Project overview](README.md) | [Minh](Johnny.md) | [Jason](Jason.md) | [Johnny](Minh.md) | [Khoi](Khoi.md)

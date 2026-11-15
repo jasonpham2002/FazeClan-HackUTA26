@@ -1,10 +1,10 @@
-# Johnny — AI interview and FaceTime integration
+# Minh and Tuong — AI interview and call integration
 
 ## Assignment
 
-Own the flagship experience: an applicant receives a real iPhone FaceTime video call, speaks casually with an AI host, and their answers reach the staff dashboard.
+Minh and Tuong jointly own the flagship experience: an applicant receives a real iPhone FaceTime video call, speaks casually with an AI host, and their answers reach the staff dashboard.
 
-Time budget: 24 hours. Collaborators: Jason owns backend and deployment; Minh owns the fan website; Khoi owns staff review and editable questions.
+Time budget: 24 hours. Collaborators: Jason owns backend and deployment; Johnny owns the fan website; Khoi owns staff review and editable questions.
 
 Repository: https://github.com/jasonpham2002/FazeClan-HackUTA26
 
@@ -98,7 +98,7 @@ Use `answered`, `partial`, `skipped`, or `not_asked` for completeness. Validate 
 ## Conversation behavior
 
 1. Identify the host as AI and confirm the person is ready.
-2. Explain that answers are transcribed for event-staff review. Coordinate the wording with Minh's consent screen.
+2. Explain that answers are transcribed for event-staff review. Coordinate the wording with Johnny's consent screen.
 3. Ask configured questions one at a time, allowing natural paraphrasing.
 4. Acknowledge the answer briefly and ask at most the configured number of follow-ups.
 5. Track covered questions explicitly. A casual conversation must still produce attributable answers.
@@ -147,4 +147,8 @@ Photorealistic avatars, emotion recognition, caller-face analysis, automatic rej
 
 ## Related assignments
 
-[Project overview](README.md) | [Johnny](Johnny.md) | [Jason](Jason.md) | [Minh](Minh.md) | [Khoi](Khoi.md)
+[Project overview](README.md) | [Minh](Johnny.md) | [Jason](Jason.md) | [Johnny](Minh.md) | [Khoi](Khoi.md)
+
+## Updated provider ownership
+
+Minh already has Muse API access. Minh and Tuong should first verify its documented capabilities and implement the agent/call pipeline together. The earlier Chert/LiveKit approach is a proposed route, not a requirement to duplicate infrastructure if Muse provides the needed functionality. Confirm native iPhone FaceTime support rather than assuming it. Agree the same question, transcript, result, and lifecycle contracts with Jason; Johnny and Khoi consume those backend contracts.

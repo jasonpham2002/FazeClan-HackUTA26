@@ -1,0 +1,8 @@
+# Optional local browser QA tooling and artifacts
+.qa/
+frontend/__pycache__/
+
+# Keep runtime credentials out of source control
+.env
+.env.*
+!.env.example

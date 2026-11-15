@@ -1,10 +1,10 @@
-# Minh — Fan frontend and application journey
+# Johnny — Fan frontend and application journey
 
 ## Assignment
 
 Build the fan-facing experience from signup through event application, AI FaceTime readiness, application tracking, and invitation acceptance. The website must make the live call feel like one coherent product flow.
 
-Collaborators: Jason owns APIs/auth/deployment; Johnny owns the AI call; Khoi owns staff pages and shared visual conventions. Deadline: 24 hours.
+Collaborators: Jason owns APIs/auth/deployment; Minh and Tuong own the AI call; Khoi owns staff pages and shared visual conventions. Deadline: 24 hours.
 
 Repository: https://github.com/jasonpham2002/FazeClan-HackUTA26
 
@@ -80,7 +80,7 @@ Status copy mapping:
 
 The server controls retry eligibility. A missed call does not mean the application was denied. Do not show a completed interview until result readiness is confirmed.
 
-If the team uses Johnny's manual FaceTime-link fallback, change the instructions and label to **Demo FaceTime session — operator assisted**. If browser calling is used, say **Browser interview**. Coordinate supported modes with Jason instead of displaying a fake dialing animation.
+If the team uses Minh's manual FaceTime-link fallback, change the instructions and label to **Demo FaceTime session — operator assisted**. If browser calling is used, say **Browser interview**. Coordinate supported modes with Jason instead of displaying a fake dialing animation.
 
 ### 5. Application decision and invitation
 
@@ -161,4 +161,8 @@ Out of scope: native iOS app, merchandise checkout, rewards fulfillment, social-
 
 ## Related assignments
 
-[Project overview](README.md) | [Johnny](Johnny.md) | [Jason](Jason.md) | [Minh](Minh.md) | [Khoi](Khoi.md)
+[Project overview](README.md) | [Minh](Johnny.md) | [Jason](Jason.md) | [Johnny](Minh.md) | [Khoi](Khoi.md)
+
+## Implementation status
+
+The fan frontend starter is in [frontend/](frontend/README.md). It has an explicit demo mode and a live API adapter awaiting Jason's authenticated endpoints. Minh and Tuong own Muse and the live call integration.
