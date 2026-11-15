@@ -6,17 +6,16 @@ import type {
   ProcessingStatus,
   PublicationStatus,
 } from '../../api/types'
-import { Badge } from './ui'
+import { Badge, type BadgeTone } from './ui'
 
-type Tone = 'neutral' | 'ok' | 'warn' | 'danger' | 'info' | 'accent'
-type Entry = [label: string, tone: Tone]
+type Entry = [label: string, tone: BadgeTone]
 
 const application: Record<ApplicationStatus, Entry> = {
   submitted: ['Submitted', 'neutral'],
   interview_pending: ['Interview pending', 'info'],
   review_pending: ['Review pending', 'warn'],
   invited: ['Invited', 'ok'],
-  waitlisted: ['Waitlisted', 'neutral'],
+  waitlisted: ['Waitlisted', 'gray'],
   accepted: ['Invitation accepted', 'ok'],
 }
 
@@ -45,7 +44,7 @@ const completeness: Record<Completeness, Entry> = {
 
 const decision: Record<Decision, Entry> = {
   invite: ['Invite', 'ok'],
-  waitlist: ['Waitlist', 'neutral'],
+  waitlist: ['Waitlist', 'gray'],
 }
 
 const publication: Record<PublicationStatus, Entry> = {

@@ -3,6 +3,7 @@ import type { EventRecord, FanApplication } from '../api/types'
 export function normalizePhone(value: string): string | null {
   if (!/^[+\d\s().-]+$/.test(value.trim())) return null
   const phone = value.trim().replace(/[\s().-]/g, '')
+  if (/^\d{10}$/.test(phone)) return `+1${phone}`
   return /^\+[1-9]\d{7,14}$/.test(phone) ? phone : null
 }
 export function eventUnavailable(event: EventRecord, now = Date.now()): string | null {
