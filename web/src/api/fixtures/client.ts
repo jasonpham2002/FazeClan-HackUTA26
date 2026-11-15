@@ -146,7 +146,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
     }
   }
   function recordActivity(app: StoredApplication, type: ActivityEvent['type']) {
-    app.activity.push({ id: `act_${crypto.randomUUID()}`, type, eventTitle: app.event.title, timestamp: now().toISOString(), source: 'Shared fixture platform', isDemo: true })
+    app.activity.push({ id: `act_${crypto.randomUUID()}`, type, eventId: app.event.id, eventTitle: app.event.title, timestamp: now().toISOString(), source: 'Shared fixture platform', isDemo: true })
   }
 
   return {
@@ -233,7 +233,11 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
         if (problem) throw new ApiError(422, 'VALIDATION_FAILED', problem)
         const event = { ...input, id: `evt_${now().getTime().toString(36)}` }
         db.events.push(event)
-        db.interviews[event.id] = { draft: defaultInterviewConfig(), draftUpdatedAt: null, versions: [] }
+        const draft = defaultInterviewConfig()
+        const versions = input.publicationStatus === 'published'
+          ? [{ versionId: `iv_${event.id}_1`, versionNumber: 1, publishedAt: now().toISOString(), config: structuredClone(draft) }]
+          : []
+        db.interviews[event.id] = { draft, draftUpdatedAt: null, versions }
         return event
       }),
 
@@ -245,6 +249,15 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
         if (problem) throw new ApiError(422, 'VALIDATION_FAILED', problem)
         db.events[index] = { ...input, id }
         for (const app of db.applications) if (app.event.id === id) app.event.title = input.title
+        const entry = db.interviews[id]
+        if (input.publicationStatus === 'published' && entry && entry.versions.length === 0) {
+          entry.versions.push({
+            versionId: `iv_${id}_1`,
+            versionNumber: 1,
+            publishedAt: now().toISOString(),
+            config: structuredClone(entry.draft),
+          })
+        }
       }),
 
     getInterview: (eventId) => call('read', (db) => toInterviewState(eventId, interviewOf(db, eventId))),
@@ -322,6 +335,17 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
         app.decision = record
         app.decisionHistory.push(record)
         app.status = input.decision === 'invite' ? 'invited' : 'waitlisted'
+      }),
+
+    recordAttendance: (id) =>
+      call('write', (db) => {
+        const app = db.applications.find((a) => a.id === id) ?? notFound('Application')
+        if (app.status !== 'accepted') {
+          throw new ApiError(409, 'ATTENDANCE_UNAVAILABLE', 'Only accepted applicants can be marked as attended.')
+        }
+        if (!app.activity.some((item) => item.type === 'attendance' && (item.eventId ? item.eventId === app.event.id : item.eventTitle === app.event.title))) {
+          recordActivity(app, 'attendance')
+        }
       }),
 
     getAnalytics: (eventId) =>

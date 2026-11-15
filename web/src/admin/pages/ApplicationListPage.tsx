@@ -13,7 +13,6 @@ import {
 } from '../../components/ui/StatusBadge'
 import { Button, EmptyState, ErrorState, inputClass, linkClass, LoadingState } from '../../components/ui/ui'
 import { formatDateTime } from '../../lib/format'
-import { EventTabs } from '../components/EventTabs'
 
 const PAGE_SIZE = 10
 
@@ -53,7 +52,6 @@ export function ApplicationListPage() {
 
   return (
     <>
-      <EventTabs eventId={eventId} />
       <h1 className="title-display text-3xl">Applications</h1>
 
       <form

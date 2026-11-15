@@ -214,6 +214,7 @@ export interface CallAttempt {
 export interface ActivityEvent {
   id: string
   type: 'application' | 'invitation_accepted' | 'attendance'
+  eventId?: string | null
   eventTitle: string | null
   timestamp: string
   source: string

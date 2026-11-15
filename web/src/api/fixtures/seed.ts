@@ -130,8 +130,8 @@ function attempt(
   }
 }
 
-function activity(id: string, type: ActivityEvent['type'], eventTitle: string, timestamp: string): ActivityEvent {
-  return { id, type, eventTitle, timestamp, source: 'Seeded demo record', isDemo: true }
+function activity(id: string, type: ActivityEvent['type'], eventTitle: string, timestamp: string, eventId: string | null = EVENT_ID): ActivityEvent {
+  return { id, type, eventId, eventTitle, timestamp, source: 'Seeded demo record', isDemo: true }
 }
 
 function decision(id: string, value: DecisionRecord['decision'], createdAt: string, reason: string | null): DecisionRecord {
@@ -215,7 +215,7 @@ export function createSeed(): Db {
   maya.transcript = mayaCall.transcript
   maya.result = mayaCall.result
   maya.activity = [
-    activity('act_maya_1', 'attendance', 'Fan Meetup Austin', '2025-10-18T23:00:00.000Z'),
+    activity('act_maya_1', 'attendance', 'Fan Meetup Austin', '2025-10-18T23:00:00.000Z', 'evt_austin'),
     activity('act_maya_2', 'application', EVENT_TITLE, maya.submittedAt),
   ]
   maya.pastApplications = [

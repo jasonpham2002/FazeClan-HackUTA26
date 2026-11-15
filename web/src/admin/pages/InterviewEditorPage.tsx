@@ -26,7 +26,6 @@ import {
   removeQuestion,
   validateConfig,
 } from '../../lib/interviewConfig'
-import { EventTabs } from '../components/EventTabs'
 
 export function InterviewEditorPage() {
   const { id: eventId = '' } = useParams()
@@ -36,7 +35,6 @@ export function InterviewEditorPage() {
 
   return (
     <>
-      <EventTabs eventId={eventId} />
       {!query.data ? (
         query.isError ? (
           <ErrorState error={query.error} onRetry={() => query.refetch()} />

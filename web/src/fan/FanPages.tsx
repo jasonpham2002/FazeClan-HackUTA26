@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, dataSource, requestMagicLink } from '../api'
+import { api, ApiError, dataSource, requestMagicLink, signOut, updateLiveProfile } from '../api'
 import type { FixtureFanInput } from '../api/types'
 import { AccessLayout } from '../components/ui/AccessLayout'
 import { Icon } from '../components/ui/Icon'
@@ -24,6 +24,9 @@ function LoadError({ error, retry }: { error: unknown; retry: () => unknown }) {
 }
 
 export function FanLayout() {
+  const queries = useQueryClient()
+  const me = useQuery(meOptions)
+  const logout = useMutation({ mutationFn: signOut, onSuccess: () => queries.resetQueries() })
   return (
     <AccessLayout
       home="/"
@@ -35,13 +38,29 @@ export function FanLayout() {
             <NavLink to="/profile"><Icon name="profile" /> My profile</NavLink>
             <NavLink to="/sign-in"><Icon name="arrowRight" /> {fixture ? 'Demo profile' : 'Sign in'}</NavLink>
           </nav>
-          {fixture && (
+          {(fixture || me.data?.role === 'staff') && (
             <nav aria-label="Demo navigation" className="access-nav access-sidebar-bottom">
               <Link to="/admin"><Icon name="dashboard" /> Staff dashboard</Link>
             </nav>
           )}
         </>
       }
+      account={me.data && (
+        <div className="flex items-center gap-3">
+          <div className="access-account">
+            <span aria-hidden="true" className="access-avatar">{(me.data.displayName || me.data.email).slice(0, 1).toUpperCase()}</span>
+            <div className="min-w-0">
+              <p className="break-words font-semibold">{me.data.displayName || me.data.email}</p>
+              <p className="text-xs text-muted capitalize">{me.data.role}</p>
+            </div>
+          </div>
+          {!fixture && (
+            <Button size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
+              Sign out
+            </Button>
+          )}
+        </div>
+      )}
       footer={
         <p>Independent concept for FaZe Clan · Event admission is reviewed by staff.</p>
       }
@@ -112,7 +131,7 @@ export function FanProfilePage() {
   const activity = useQuery({ queryKey: ['fan', 'activity'], queryFn: api.listMyActivity, enabled: Boolean(me.data) })
   if (me.isPending) return <LoadingState />
   if (me.isError) return <LoadError error={me.error} retry={() => me.refetch()} />
-  return <div className="space-y-7"><h1 className={pageTitle}>Your community profile</h1><div className="grid gap-6 lg:grid-cols-[1fr_2fr]"><Card title={me.data.displayName || 'Community member'}><p className="break-all">{me.data.email}<br />{me.data.phone || 'No phone on profile'}</p><Link to="/sign-in" className={`${linkButtonClass} mt-4`}>{fixture ? 'Change demo profile' : 'Manage profile'}</Link></Card><div className="space-y-6"><Card title="Your applications">{apps.isPending ? <LoadingState /> : apps.isError ? <LoadError error={apps.error} retry={() => apps.refetch()} /> : !apps.data.length ? <EmptyState title="Your first night starts here"><Link to="/">Explore events</Link></EmptyState> : <ul className="divide-y divide-border">{apps.data.map(app => <li key={app.id} className="space-y-3 py-4"><h2 className="font-semibold">{app.event.title}</h2><ApplicationStatusBadge status={app.status} /><div><Link to={`/applications/${app.id}`} className={linkButtonClass}>View application</Link></div></li>)}</ul>}</Card>
+  return <div className="space-y-7"><h1 className={pageTitle}>Your community profile</h1><div className="grid gap-6 lg:grid-cols-[1fr_2fr]"><Card title={me.data.displayName || 'Community member'}><p className="break-all">{me.data.email}<br />{me.data.phone || 'No phone on profile'}</p><Link to="/sign-in" className={`${linkButtonClass} mt-4`}>{fixture ? 'Change demo profile' : 'Manage profile'}</Link></Card><div className="space-y-6"><Card title="Your applications">{apps.isPending ? <LoadingState /> : apps.isError ? <LoadError error={apps.error} retry={() => apps.refetch()} /> : !apps.data.length ? (me.data.role === 'staff' ? <EmptyState title="Staff account"><Link to="/admin" className={linkButtonClass}>Open staff dashboard</Link></EmptyState> : <EmptyState title="Your first night starts here"><Link to="/">Explore events</Link></EmptyState>) : <ul className="divide-y divide-border">{apps.data.map(app => <li key={app.id} className="space-y-3 py-4"><h2 className="font-semibold">{app.event.title}</h2><ApplicationStatusBadge status={app.status} /><div><Link to={`/applications/${app.id}`} className={linkButtonClass}>View application</Link></div></li>)}</ul>}</Card>
       <Card title="Recorded activity">{activity.isPending ? <LoadingState /> : activity.isError ? <LoadError error={activity.error} retry={() => activity.refetch()} /> : !activity.data.length ? <EmptyState title="No activity recorded yet">New fans are welcome. Your activity appears as it is recorded.</EmptyState> : <ul className="divide-y divide-border">{activity.data.map(item => <li key={item.id} className="space-y-1 py-3"><p className="font-semibold">{{ application: 'Application submitted', invitation_accepted: 'Invitation accepted', attendance: 'Attendance confirmed' }[item.type]}</p><p>{item.eventTitle}</p><p className="text-sm text-muted">{formatDateTime(item.timestamp)} · {item.source}{item.isDemo ? ' · Demo record' : ''}</p></li>)}</ul>}</Card></div></div></div>
 }
 
@@ -122,25 +141,75 @@ export function FanSignInPage() {
 }
 
 function LiveSignIn() {
+  const queries = useQueryClient()
+  const me = useQuery(meOptions)
   const [email, setEmail] = useState('')
+  const [values, setValues] = useState<{ displayName: string; phone: string } | null>(null)
+  const draft = values || { displayName: me.data?.displayName || '', phone: me.data?.phone || '' }
+  const trimmedPhone = draft.phone.trim()
+  const normalizedPhone = trimmedPhone ? normalizePhone(trimmedPhone) : null
+  const phoneInvalid = Boolean(trimmedPhone && !normalizedPhone)
   const mutation = useMutation({
     mutationFn: () => requestMagicLink(email.trim().toLowerCase(), new URL('/', window.location.origin).href),
   })
-  return <div className="mx-auto max-w-xl space-y-6"><h1 className={pageTitle}>Sign in</h1><Card>
-    <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!mutation.isPending) mutation.mutate() }}>
-      <Field label="Demo email" htmlFor="live-email" hint="Use an @example.test address, then open the link in Mailpit.">
-        <input id="live-email" value={email} onChange={change => setEmail(change.target.value)}
-          className={inputClass} type="email" required pattern=".+@example[.]test" maxLength={254} />
-      </Field>
-      {mutation.isError && <ErrorState error={mutation.error} />}
-      {mutation.isSuccess && <Notice>
-        <a className="font-semibold underline" href="http://127.0.0.1:8025" target="_blank" rel="noopener noreferrer">
-          Open Mailpit
-        </a>{' '}and click the sign-in link in your latest message.
-      </Notice>}
-      <Button type="submit" variant="primary" disabled={mutation.isPending}>Send sign-in link</Button>
-    </form>
-  </Card></div>
+  const saveProfile = useMutation({
+    mutationFn: () =>
+      updateLiveProfile({
+        displayName: draft.displayName.trim() || me.data?.email.split('@')[0] || 'Fan',
+        phone: normalizedPhone,
+      }),
+    onSuccess: async () => {
+      setValues(null)
+      await queries.invalidateQueries()
+    },
+  })
+  const logout = useMutation({
+    mutationFn: signOut,
+    onSuccess: () => {
+      setValues(null)
+      queries.resetQueries()
+    },
+  })
+  return <div className="mx-auto max-w-xl space-y-6"><h1 className={pageTitle}>{me.data ? 'Manage profile' : 'Sign in'}</h1>
+    {me.data && <Card title={`Signed in as ${me.data.email}`}>
+      <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!saveProfile.isPending && !phoneInvalid) saveProfile.mutate() }}>
+        <Field label="Display name" htmlFor="live-display-name">
+          <input id="live-display-name" value={draft.displayName} onChange={change => setValues({ ...draft, displayName: change.target.value })}
+            className={inputClass} type="text" required maxLength={80} disabled={saveProfile.isPending} />
+        </Field>
+        <Field label="FaceTime phone number" htmlFor="live-phone" hint="Optional E.164 format, e.g. +12025550123"
+          error={phoneInvalid ? 'Enter a valid E.164 phone number (e.g. +12025550123) or leave blank.' : undefined}>
+          <input id="live-phone" value={draft.phone} onChange={change => setValues({ ...draft, phone: change.target.value })}
+            className={inputClass} type="tel" maxLength={24} disabled={saveProfile.isPending} />
+        </Field>
+        {saveProfile.isError && <ErrorState error={saveProfile.error} />}
+        {saveProfile.isSuccess && <Notice tone="ok">Profile saved.</Notice>}
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit" variant="primary" disabled={saveProfile.isPending || phoneInvalid || !draft.displayName.trim()}>
+            {saveProfile.isPending ? 'Saving…' : 'Save profile'}
+          </Button>
+          <Button type="button" onClick={() => logout.mutate()} disabled={logout.isPending}>
+            Sign out
+          </Button>
+        </div>
+      </form>
+    </Card>}
+    <Card title={me.data ? 'Switch account' : undefined}>
+      <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!mutation.isPending) mutation.mutate() }}>
+        <Field label="Demo email" htmlFor="live-email" hint="Use an @example.test address, then open the link in Mailpit.">
+          <input id="live-email" value={email} onChange={change => setEmail(change.target.value)}
+            className={inputClass} type="email" required pattern=".+@example[.]test" maxLength={254} />
+        </Field>
+        {mutation.isError && <ErrorState error={mutation.error} />}
+        {mutation.isSuccess && <Notice>
+          <a className="font-semibold underline" href="http://127.0.0.1:8025" target="_blank" rel="noopener noreferrer">
+            Open Mailpit
+          </a>{' '}and click the sign-in link in your latest message.
+        </Notice>}
+        <Button type="submit" variant="primary" disabled={mutation.isPending}>Send sign-in link</Button>
+      </form>
+    </Card>
+  </div>
 }
 
 function FixtureProfile() {

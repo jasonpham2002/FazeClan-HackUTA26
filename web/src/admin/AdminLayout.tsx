@@ -1,27 +1,41 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Outlet, useMatch, useSearchParams } from 'react-router-dom'
-import { api, ApiError, dataSource } from '../api'
+import { api, ApiError, dataSource, signOut } from '../api'
 import { AccessLayout } from '../components/ui/AccessLayout'
 import { Icon } from '../components/ui/Icon'
-import { EmptyState, ErrorState, linkClass, LoadingState } from '../components/ui/ui'
+import { Button, EmptyState, ErrorState, linkClass, LoadingState } from '../components/ui/ui'
 
 /**
  * Guards every /admin route on GET /me. This only improves the experience:
  * the backend must still enforce staff access on each endpoint.
  */
 export function AdminLayout() {
+  const queries = useQueryClient()
   const me = useQuery({ queryKey: ['me'], queryFn: api.getMe })
+  const logout = useMutation({
+    mutationFn: signOut,
+    onSuccess: () => queries.resetQueries(),
+  })
   const overview = useMatch('/admin')
   const eventRoute = useMatch('/admin/events/:eventId/*')
+  const eventId = eventRoute?.params.eventId
+  const appRoute = useMatch('/admin/applications/:appId')
   const [params] = useSearchParams()
   const events = useQuery({
     queryKey: ['events'],
     queryFn: api.listAdminEvents,
-    enabled: me.data?.role === 'staff' && Boolean(overview || eventRoute),
+    enabled: me.data?.role === 'staff' && Boolean(overview || (eventId && eventId !== 'new')),
+  })
+  const appDetail = useQuery({
+    queryKey: ['application', appRoute?.params.appId ?? ''],
+    queryFn: () => api.getApplication(appRoute!.params.appId!),
+    enabled: me.data?.role === 'staff' && Boolean(appRoute?.params.appId),
   })
   const selected = overview
     ? events.data?.find(event => event.id === params.get('event')) ?? events.data?.[0]
-    : events.data?.find(event => event.id === eventRoute?.params.eventId)
+    : eventId && eventId !== 'new'
+      ? events.data?.find(event => event.id === eventId) ?? { id: eventId, title: 'Event' }
+      : appDetail.data?.event
   const overviewLink = selected ? `/admin?event=${encodeURIComponent(selected.id)}` : '/admin'
 
   let body
@@ -41,7 +55,23 @@ export function AdminLayout() {
         <ErrorState error={me.error} onRetry={() => me.refetch()} />
       )
   } else if (me.data.role !== 'staff') {
-    body = <EmptyState title="Access denied">This area is for event staff. Your account is a fan account.</EmptyState>
+    body = (
+      <EmptyState title="Access denied">
+        <div className="space-y-3">
+          <p>This area is for event staff. Your account is a fan account.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {dataSource === 'live' && (
+              <Button size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
+                Sign out
+              </Button>
+            )}
+            <Link to="/sign-in" className={linkClass}>
+              Switch account
+            </Link>
+          </div>
+        </div>
+      </EmptyState>
+    )
   } else {
     body = <Outlet />
   }
@@ -67,22 +97,27 @@ export function AdminLayout() {
             </div>
           )}
           <div className="access-sidebar-bottom">
-            {dataSource === 'fixtures' && (
-              <nav aria-label="Demo navigation" className="access-nav">
-                <Link to="/"><Icon name="arrowRight" /> Fan experience</Link>
-              </nav>
-            )}
+            <nav aria-label="Demo navigation" className="access-nav">
+              <Link to="/"><Icon name="arrowRight" /> Fan experience</Link>
+            </nav>
             <p className="access-credit">Independent FaZe Clan concept</p>
           </div>
         </>
       }
       account={me.data && (
-        <div className="access-account">
-          <span aria-hidden="true" className="access-avatar">{(me.data.displayName ?? me.data.email).slice(0, 1).toUpperCase()}</span>
-          <div className="min-w-0">
-            <p className="break-words font-semibold">{me.data.displayName ?? me.data.email}</p>
-            <p className="text-xs text-muted capitalize">{me.data.role}</p>
+        <div className="flex items-center gap-3">
+          <div className="access-account">
+            <span aria-hidden="true" className="access-avatar">{(me.data.displayName ?? me.data.email).slice(0, 1).toUpperCase()}</span>
+            <div className="min-w-0">
+              <p className="break-words font-semibold">{me.data.displayName ?? me.data.email}</p>
+              <p className="text-xs text-muted capitalize">{me.data.role}</p>
+            </div>
           </div>
+          {dataSource === 'live' && (
+            <Button size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
+              Sign out
+            </Button>
+          )}
         </div>
       )}
     >

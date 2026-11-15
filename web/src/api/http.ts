@@ -1,3 +1,4 @@
+import { defaultInterviewConfig } from '../lib/interviewConfig'
 import { ApiError, type ApiClient } from './client'
 import type {
   ActivityEvent, Analytics, Answer, ApplicationDetail, ApplicationListQuery, ApplicationStatus,
@@ -96,7 +97,11 @@ function review(row: ReviewDto): ApplicationDetail {
  * CONFIRM (Jason): session mechanism. This assumes a cookie session, hence
  * `credentials: 'include'`. Switch to a bearer header here if that changes.
  */
-export function createHttpClient(baseUrl: string): ApiClient & { requestMagicLink(email: string, callbackURL: string): Promise<void> } {
+export function createHttpClient(baseUrl: string): ApiClient & {
+  requestMagicLink(email: string, callbackURL: string): Promise<void>
+  signOut(): Promise<void>
+  updateProfile(input: { displayName: string; phone: string | null }): Promise<Me>
+} {
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response
     try {
@@ -149,6 +154,10 @@ export function createHttpClient(baseUrl: string): ApiClient & { requestMagicLin
     async requestMagicLink(email, callbackURL) {
       await request('POST', '/api/auth/sign-in/magic-link', { email, name: email.split('@')[0].slice(0, 80), callbackURL })
     },
+    async signOut() {
+      await request('POST', '/api/auth/sign-out', {})
+    },
+    updateProfile: input => request('PATCH', '/me', input),
     getFanMe: () => request('GET', '/me'),
     setFixtureFan: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the real authentication service to change your profile.') },
     listFanEvents: async () => (await request<{ events: EventDto[] }>('GET', '/events')).events.map(eventRecord),
@@ -173,8 +182,9 @@ export function createHttpClient(baseUrl: string): ApiClient & { requestMagicLin
         publishedVersion: VersionDto | null; hasUnpublishedChanges: boolean;
       }>('GET', `/admin/events/${enc(eventId)}/interview`)
       return {
-        eventId, draft: state.draft ?? { intro: '', tone: '', maxDurationSeconds: 180, questions: [] },
-        draftUpdatedAt: state.draftUpdatedAt, hasUnpublishedChanges: state.hasUnpublishedChanges,
+        eventId, draft: state.draft ?? defaultInterviewConfig(),
+        draftUpdatedAt: state.draftUpdatedAt,
+        hasUnpublishedChanges: state.draft ? state.hasUnpublishedChanges : !state.publishedVersion,
         published: state.publishedVersion && version(state.publishedVersion),
       }
     },
@@ -198,6 +208,9 @@ export function createHttpClient(baseUrl: string): ApiClient & { requestMagicLin
     getApplication: async id => review(await request<ReviewDto>('GET', `/admin/applications/${enc(id)}`)),
     postDecision: async (id, input) => {
       await request('POST', `/admin/applications/${enc(id)}/decision`, { ...input, decision: input.decision === 'invite' ? 'invited' : 'waitlisted' })
+    },
+    recordAttendance: async (id) => {
+      await request('POST', `/admin/applications/${enc(id)}/attendance`, {})
     },
     async getAnalytics(eventId) {
       const counts = await request<AnalyticsDto>('GET', `/admin/events/${enc(eventId)}/analytics`)

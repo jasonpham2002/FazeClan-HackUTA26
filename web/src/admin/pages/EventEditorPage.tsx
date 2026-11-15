@@ -6,7 +6,6 @@ import type { EventInput, EventRecord, PublicationStatus } from '../../api/types
 import { PublicationBadge } from '../../components/ui/StatusBadge'
 import { Badge, Button, Card, describeError, ErrorState, Field, inputClass, linkClass, LoadingState, Notice, Section } from '../../components/ui/ui'
 import { utcIsoToZonedLocal, zonedLocalToUtcIso } from '../../lib/format'
-import { EventTabs } from '../components/EventTabs'
 
 const TIMEZONES = [
   'America/Chicago',
@@ -82,19 +81,14 @@ export function EventEditorPage() {
   const query = useQuery({ queryKey: ['event', id], queryFn: () => api.getAdminEvent(id!), enabled: !!id })
 
   if (!id) return <EventForm key="new" event={null} />
-  return (
-    <>
-      <EventTabs eventId={id} />
-      {!query.data ? (
-        query.isError ? (
-          <ErrorState error={query.error} onRetry={() => query.refetch()} />
-        ) : (
-          <LoadingState label="Loading event…" />
-        )
-      ) : (
-        <EventForm key={id} event={query.data} />
-      )}
-    </>
+  return !query.data ? (
+    query.isError ? (
+      <ErrorState error={query.error} onRetry={() => query.refetch()} />
+    ) : (
+      <LoadingState label="Loading event…" />
+    )
+  ) : (
+    <EventForm key={id} event={query.data} />
   )
 }
 
@@ -129,10 +123,11 @@ function EventForm({ event }: { event: EventRecord | null }) {
     onSuccess: async (eventId) => {
       await queryClient.invalidateQueries({ queryKey: ['events'] })
       await queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+      await queryClient.invalidateQueries({ queryKey: ['interview', eventId] })
       await queryClient.invalidateQueries({ queryKey: ['fan', 'events'] })
       await queryClient.invalidateQueries({ queryKey: ['fan', 'event', eventId] })
       if (event) setSaved(true)
-      else navigate(`/admin/events/${eventId}/interview`)
+      else navigate(form.publicationStatus === 'published' ? `/admin/events/${eventId}` : `/admin/events/${eventId}/interview`)
     },
   })
 
