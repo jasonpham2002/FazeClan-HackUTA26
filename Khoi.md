@@ -1,188 +1,108 @@
-# Khoi — Staff dashboard, editable interviews, and review analytics
+# Khoi — Complete fan and staff frontend expansion
 
-## Assignment
+Owner: Khoi. Time budget: the remaining 10-hour sprint.
 
-Build the staff experience that makes the FaceTime call useful: configure an event interview, inspect what applicants actually said, see relevant activity, and issue Invite/Waitlist decisions.
+## Outcome and boundaries
 
-Collaborators: Jason owns data/APIs/auth; Minh and Tuong own the agent and result structure; Johnny owns fan pages and shared styling. Deadline: 24 hours.
+Own all frontend work for the expanded FaZe ID experience in the existing `web/` React app. Preserve existing authentication, profile editing, community events, application status, AI interview evidence, and staff review. Do not start a second website or move back to the standalone `frontend/` prototype.
 
-Repository: https://github.com/jasonpham2002/FazeClan-HackUTA26
+Johnny supplies manually imported current roster/stat/match data. Jason supplies follows, predictions, points, rewards and eligibility. Minh wires YouTube, AI summaries and calls. No SerpAPI is part of the architecture.
 
-Repository checked: the remote currently contains only README.md. The architecture, routes, and interfaces below are implementation proposals. Check for new code and applicable AGENTS.md instructions before starting; coordinate shared contract changes with affected teammates.
+Related assignments: [Johnny data](Minh.md), [Jason backend](Jason.md), [Minh integrations](Johnny.md), [overview](README.md).
 
-## Primary pitch screen
+## First-hour coordination
 
-Prioritize the application detail screen. A reviewer should be able to see the event's configured questions, corresponding applicant answers, supporting transcript, activity history, and a decision panel without navigating through unrelated pages.
+1. Inspect latest main and existing shared API/UI modules.
+2. Agree endpoint envelopes, player IDs, stat periods, market options, reward rules, and loading/error states with the backend owners.
+3. Keep `web/src/api/types.ts`, `client.ts`, `http.ts`, and fixture adapters aligned. Coordinate shared-file changes with the others; do not invent a separate client in each page.
+4. Receive a real player/stats fixture from Johnny and an AI/highlight fixture from Minh by hour two.
+5. Pick one complete presentation journey before polishing the entire roster.
 
-Use the same typography, spacing, colors, and status components as Johnny. Make dense staff data readable on desktop; ensure basic tablet usability.
+## Fan screens, in priority order
 
-Suggested routes:
+### 1. CS2 roster and player selection
 
-```text
-/admin
-/admin/events/:id
-/admin/events/:id/interview
-/admin/events/:id/applications
-/admin/applications/:id
-```
+Show the verified roster with handle, role, image/placeholder, and current membership status. Preserve historical player pages after roster changes. Coach pages should show appropriate context instead of fake player metrics. Make switching players and following a player obvious.
 
-## Screen requirements
+The roster is manually refreshed. Display its checked timestamp; do not label it a live feed. The earlier list of names must not be assumed current without Johnny's source verification.
 
-### 1. Event overview
+### 2. Player detail: analytics first
 
-Show selected event, application count, connected calls, completed interviews, pending reviews, issued invitations, and accepted invitations. Include a compact call/application funnel and a review queue.
+Page order is a product requirement:
 
-Use Jason's aggregated values rather than counting only the current paginated list. Every rate needs a clear denominator; zero-denominator rates show an em dash or Not available.
+1. Identity, role, follow control, stat period and sourced performance cards.
+2. Upcoming matches, tournament progress, calendar and recent activity.
+3. Related videos/highlights.
 
-### 2. Event editor
+Cards: source-defined rating/version, K/D, ADR, headshot percentage and recent results. Show period, sample size where known, source links, and updated timestamp. A missing value is unavailable, never zero. A chart needs comparable observations; do not manufacture a trend from one aggregate.
 
-Support title, description, location, start date/time and timezone, capacity, application deadline, and publication status. Keep the form simple. Validate required fields, positive capacity, and sensible dates on client and server.
+Add Minh's AI interpretation near the stats, clearly labeled as generated analysis with supporting sources. Preserve numerical cards if the AI call fails. Use source and snapshot metadata to avoid showing an old insight alongside a new stat snapshot.
 
-The event and interview publication states should be visible. Staff should know if applicants would receive a published interview or if only a draft exists.
+### 3. Match calendar and predictions
 
-### 3. Interview editor
+Distinguish esports fixtures from community events. Show date/time with the event's timezone, tournament stage, participants, and market deadline.
 
-Editable configuration:
+Support free match-winner and tournament-placement picks with clear fixed point awards. Render open, submitted, locked, settled, void, correct, and incorrect states. The server determines eligibility and lock time; a client countdown is informative only. Restore the saved pick on reload. A retry/error must not falsely claim a pick was saved.
 
-- Opening greeting.
-- Tone, defaulting to friendly and casual.
-- Maximum duration, defaulting to 180 seconds.
-- Questions with stable IDs, prompt, purpose, required flag, order, and follow-up limit.
+### 4. My FaZe ID
 
-Provide add, delete, edit, and move-up/move-down controls. Drag-and-drop is optional. Suggest four initial questions:
+Extend the existing profile with followed players, predictions/results, point balance, transaction reasons, confirmed activity, redemptions and event applications. New fans get honest empty states. An accepted invitation is distinct from attendance.
 
-1. What FaZe content have you enjoyed recently?
-2. What made you want to attend this event?
-3. What would you be most excited to do there?
-4. Have you joined a FaZe event or community activity before?
+Show ledger entries such as Correct match prediction, Confirmed attendance, Reward redemption and Staff adjustment. Display only backend-recorded awards. No client-side balance increments or random engagement scores.
 
-Allow fans to be new; these are conversation prompts, not an obscure-trivia exam.
+### 5. Rewards and exclusive access
 
-Suggested frontend validation, matched by Jason: 1–6 questions, nonempty prompts, duration 60–300 seconds, follow-ups 0–2. These are proposed demo limits, not provider restrictions; agree them with Minh and Jason.
+Show proposed merchandise, raffle-entry, early-access and priority concepts, but connect one actual sample redemption first. Display cost, stock/availability, confirmation and claim status. Handle insufficient points, out of stock, and duplicate requests without fake success.
 
-**Save draft** and **Publish** are separate actions. Show version number, unsaved changes, and published timestamp. Publishing creates an immutable version; existing applications retain their original version. After publication, later edits start a new draft. Make that behavior visible to staff.
+For selected experiences, show the points eligibility threshold, application action, AI interview and staff-review status. Points unlock eligibility; applying/taking the interview does not spend them. Keep event capacity and the human invitation decision visible.
 
-Optional preview: render a sample opening and question order. Do not simulate a successful real call inside this preview.
+### 6. Highlights and content check-ins
 
-### 4. Application list
+Use Minh's YouTube response for thumbnails, titles, channel, publication date and playable/clickable video links. If embedding is unavailable, provide a useful source link. Do not substitute unrelated videos just to fill a carousel.
 
-Columns: applicant, event, submission time, application status, latest call outcome, result readiness, decision. Filters: event, application status, call status, search. Provide pagination and clear loading/empty/error states.
+If the team demonstrates QR-based engagement, call it a content check-in. Show one-time claim success/already-claimed/expired states; do not describe a QR scan as proof of complete video viewing.
 
-Avoid a numerical fan-authenticity score or an AI leaderboard. Make incomplete calls and pending extraction visible rather than sorting them as weak applicants.
+## Staff screens
 
-### 5. Application detail
+Extend the existing dashboard with the minimum controls necessary for the same journey:
 
-Recommended layout:
+- Create prediction markets, choose fixed award and lock deadline, review picks, confirm sourced outcomes, and view settlement status.
+- Create/update a proposed reward, cost, stock and availability; inspect redemption records.
+- Inspect a fan's points ledger; make an adjustment only with a required reason and saved audit record.
+- Configure selected event eligibility thresholds and reuse existing interview questions, application review, Invite/Waitlist and attendance controls.
+- Display data refresh/source status. Johnny owns the importer; a full roster/stat CMS is optional, not a blocker for the first demo.
 
-```text
-Applicant / event / current status / interview version
+Staff must see saved state read back from the API. A failed write must not appear published, settled, redeemed, or awarded. Confirm result settlement deliberately; it may award points to many users.
 
-Left: Questions and answers          Right: Activity and decision
-      Summary                               Recorded attendance
-      Expandable transcript                 Past applications
-      Call attempt history                  Invite / Waitlist
-```
+## Technical expectations
 
-For each configured question show:
+Reuse existing theme tokens, brand assets, shared components, routing, and query patterns. Keep fake data confined to explicit fixtures. Production/live mode must not silently fall back to localStorage accounts or rewards. Never put YouTube/AI keys in Vite public variables or browser bundles.
 
-- The exact published question, even if the agent paraphrased it aloud.
-- Answer summary.
-- Completeness: answered, partial, skipped, not asked.
-- Expandable supporting transcript excerpts.
-- Missing evidence explicitly, rather than a fabricated summary.
+Invalidate/refetch the corresponding queries after follows, picks, settlement, redemption and staff decisions. Preserve partially loaded data with honest error messaging. Protect staff navigation and rely on server authorization for actual security.
 
-Show overall interview summary, stated interests, call duration, processing status, and attempts. Let staff inspect a partial transcript if extraction failed. Use Minh's segment references to jump to evidence.
+Check keyboard operation, form labels, contrast, loading/empty/error states, narrow mobile layout, long handles/titles, and date/time display. Use consistent status labels on both fan and staff pages.
 
-Treat transcript and model output as untrusted text: render escaped text, not raw HTML. Distinguish agent statements from applicant statements.
-
-### 6. Decision panel
-
-- Two primary choices: Invite and Waitlist.
-- Optional staff reason field.
-- Persist through Jason's API before updating the final state.
-- Show reviewer, timestamp, and previous decisions when available.
-- Display capacity context and handle server conflicts.
-- Keep final invitation decisions human-controlled.
-- Explain that a waitlist may reflect capacity; do not label applicants fake fans.
-
-Changing an existing decision should be deliberate and visible. Do not issue calls or notifications implicitly when a reviewer merely opens a page.
-
-## API contracts
-
-| Endpoint | Use |
-|---|---|
-| GET /me | Verify session and role |
-| POST /admin/events | Create event |
-| PATCH /admin/events/:id | Update event |
-| GET /admin/events/:id/interview | Load draft and publication metadata |
-| PUT /admin/events/:id/interview-draft | Save configuration |
-| POST /admin/events/:id/interview-publish | Publish version |
-| GET /admin/applications | Paginated/filtered queue |
-| GET /admin/applications/:id | Profile, history, attempts, Q&A, transcript, decision |
-| POST /admin/applications/:id/decision | Save invite/waitlist and reason |
-| GET /admin/events/:id/analytics | Counts/rates |
-
-Question configuration:
-
-```json
-{
-  "intro": "Thanks for applying!",
-  "tone": "friendly and casual",
-  "maxDurationSeconds": 180,
-  "questions": [
-    {"id": "q_1", "prompt": "What FaZe content do you enjoy?", "purpose": "Understand interests", "required": true, "order": 1, "maxFollowUps": 1}
-  ]
-}
-```
-
-Agree response shapes with Jason during hour one. Ask Minh for a representative result fixture by hour six. Build initially against explicit fixtures and replace them in the live flow; never turn an API failure into fake saved data.
-
-Route guards improve UX, but Jason must enforce staff access on the backend. Handle 401/403 cleanly. Refreshing a detail page should reconstruct it entirely from persisted data.
-
-## Analytics and activity semantics
-
-Show platform-observed activity only. Separate application, invitation acceptance, and actual attendance. Every record should include source and timestamp. A new fan with no records gets No activity recorded yet, not a low engagement judgment.
-
-Use a small funnel or bar chart only if it improves the overview. Core metrics:
-
-- Applications received.
-- Calls attempted and connected.
-- Interviews completed.
-- Reviews pending.
-- Invitations issued and accepted.
-
-Jason owns calculations. You own labels, readable display, denominator explanation, and clearly marking synthetic demo activity. External FaZe social engagement is not available unless separately integrated.
-
-## Implementation order and schedule
+## Timeline
 
 | Hours | Deliverable |
 |---|---|
-| 0–2 | Shared styling with Johnny; contracts with Jason; review fixture layout |
-| 2–6 | Application detail shell, list, and question editor against fixtures |
-| 6–10 | Live published questions and live interview-result display |
-| 10–14 | Invite/waitlist decisions and event editor |
-| 14–18 | Analytics, evidence links, partial-result and error states |
-| 18–21 | Full rehearsal: edit question → call → review → invite |
-| 21–24 | Freeze, visual polish, seeded presentation walkthrough |
+| 0–1 | Shared contracts, routes, selected demo player, screen hierarchy |
+| 1–3 | Player selector/detail with stats and calendar against agreed fixtures |
+| 3–5 | Live data/AI/highlights integration; predictions and points profile |
+| 5–7 | Rewards, staff settlement/catalog, exclusive event eligibility |
+| 7–8 | Complete fan/staff loop; error and mobile checks |
+| 8–10 | Feature freeze, polish, build, deployment handoff and rehearsal |
 
-## Acceptance checks
+## Acceptance criteria
 
-- [ ] Staff can edit, reorder, save, and publish questions without touching code.
-- [ ] An application shows its pinned interview version after later edits.
-- [ ] Each answer is tied to the correct question and actual transcript evidence.
-- [ ] Missing answers and failed processing are clearly visible.
-- [ ] Invite/waitlist survives refresh and appears on Johnny's fan page.
-- [ ] Historical activity is sourced; synthetic records are marked.
-- [ ] Dashboard counts match Jason's persisted aggregates.
-- [ ] A fan session cannot access staff data.
-- [ ] Backend errors never appear as successful publication or decisions.
+- [ ] A sourced player page follows the required analytics → schedule/activity → highlights order.
+- [ ] Current/manual refresh timestamps and source links are clear; sample data is labeled.
+- [ ] A fan follows a player, submits a pick, and sees it locked at the correct state.
+- [ ] Staff settles the result; the fan sees a persisted point award and reason.
+- [ ] One sample redemption persists and updates balance/stock via the backend.
+- [ ] An eligible fan can use the existing AI application/review journey.
+- [ ] AI or YouTube failure does not blank the rest of the player page.
+- [ ] No real keys, staff-only notes, or another fan's private records appear in fan responses/UI.
+- [ ] Build, meaningful UI tests and the complete demo journey pass before deployment.
 
-## Pitch handoff
-
-Prepare one clean review example and one partial-call example. Document the staff sign-in process, event URL, interview editor URL, and application review URL. Coordinate the final demo so the team can change a question, complete the live call, open the resulting evidence, and issue an invitation in one uninterrupted walkthrough.
-
-Out of scope: complex RBAC, automated rejection, authenticity scoring, rewards catalogs, merchandise logistics, CRM imports, and external social analytics.
-
-## Related assignments
-
-[Project overview](README.md) | [Minh](Johnny.md) | [Jason](Jason.md) | [Johnny](Minh.md) | [Khoi](Khoi.md)
+Out of scope: multi-game layouts, a separate native app, complex animated charts without data, full merchandise checkout/shipping, and a total redesign of existing working screens.

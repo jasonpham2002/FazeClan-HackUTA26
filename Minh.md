@@ -1,168 +1,129 @@
-# Johnny — Fan frontend and application journey
+# Johnny — CS2 data, manual imports, and player APIs
 
-## Assignment
+Owner: Johnny (working with Codex). Time budget: the remaining 10-hour sprint.
 
-Build the fan-facing experience from signup through event application, AI FaceTime readiness, application tracking, and invitation acceptance. The website must make the live call feel like one coherent product flow.
+Filename note: this file is `Minh.md` because Johnny and Minh's filenames were explicitly swapped earlier. The heading and assignment table identify the owner.
 
-Collaborators: Jason owns APIs/auth/deployment; Minh and Tuong own the AI call; Khoi owns staff pages and shared visual conventions. Deadline: 24 hours.
+## Product and scope
 
-Repository: https://github.com/jasonpham2002/FazeClan-HackUTA26
+FaZe ID is expanding the existing player/fan/staff platform at http://104.238.146.107/. Fans choose a current CS2 player, see sourced performance statistics first, then upcoming matches/tournament progress and activity, then videos. Predictions and verified engagement earn points for proposed rewards and limited-access experiences. The existing AI interview remains part of limited-access event applications.
 
-Repository checked: the remote currently contains only README.md. The architecture, routes, and interfaces below are implementation proposals. Check for new code and applicable AGENTS.md instructions before starting; coordinate shared contract changes with affected teammates.
+**No SerpAPI.** Team members manually collect current facts from identified sources, import them into PostgreSQL, and refresh them deliberately. This is current-at-import data, not a real-time match feed. Numerical statistics come from evidence; Minh's AI explains them without inventing values.
 
-## Scope and visual direction
+Use the shared `web/`, `backend/`, and existing PostgreSQL schema. Preserve authentication, events, interview versioning, and staff review. The standalone `frontend/` is reference material, not the implementation target.
 
-Create a responsive fan website, prioritizing an iPhone viewport and a desktop pitch screen. Use a consistent dark palette, restrained red accents, strong event imagery if assets are available, readable text, and prominent next actions. Coordinate tokens and shared components with Khoi in the first hour.
+## Team boundaries
 
-Label the public demo as an independent concept for FaZe Clan rather than implying an official partnership. Avoid spending the sprint on a native iOS app, elaborate animation, or a large marketing homepage.
+| Owner | Owns |
+|---|---|
+| Johnny | Roster/player/stat/match/tournament schemas, manual import validation, player-data read endpoints |
+| Jason | Prediction markets, settlement, points ledger, rewards, QR claims, event eligibility; central backend registration/deployment |
+| Khoi | All fan and staff UI; shared frontend types and adapters |
+| Minh | YouTube integration, AI insight API, existing AI interview; Tuong can support calls |
 
-Suggested routes:
+Related assignments: [Jason](Jason.md), [Khoi](Khoi.md), [Minh integrations](Johnny.md), [overview](README.md).
 
-```text
-/                  event discovery or featured event
-/sign-in           signup/login
-/events/:id        event details and apply
-/applications/:id  readiness, call status, review status, invitation
-/profile           applications and recorded activity
+## First hour: establish the data contract
+
+1. Inspect current main and backend migrations before editing. Add a new migration; never rewrite an applied SQL file.
+2. Agree player IDs, match IDs, tournament IDs, timestamps, stats payload, and endpoint envelopes with the others.
+3. Agree migration numbers with Jason to avoid collisions. Work in a separate backend route module; give Jason its registration snippet instead of both editing server registration concurrently.
+4. Verify the current CS2 roster from sources and record the verification time. The previously supplied names are candidates to check, not a guaranteed active roster. Separate active, benched/former, and coach records.
+5. Select one player with complete, defensible stats as the main demo profile; cover the rest of the verified roster with honest available data.
+
+## Data to deliver
+
+### Player and roster records
+
+Store stable internal ID, handle, display name, role, roster status, team, source URL, and `checkedAt`. Add image URLs only from an approved/attributed source; missing images get a deliberate placeholder.
+
+Roster membership changes should not delete historical stats, predictions, or follows. A coach gets coach-specific context, not fabricated ADR/KD metrics. Do not hard-code everyone from an old list as currently active.
+
+### Statistics snapshots
+
+Store immutable snapshots containing:
+
+- `snapshotId`, `playerId`, provider/source identifier and URL.
+- Reporting period (`periodStart`, `periodEnd`, readable label) and sample size (`mapsPlayed` when known).
+- Available rating, K/D, ADR, headshot percentage, and recent match results.
+- Units, metric definition/rating version, `retrievedAt`, and `isDemo`.
+- Missing metrics as null, not zero. Never mix different reporting periods into one apparently comparable card.
+
+Treat rating as source-defined; do not silently combine rating versions. A trend needs at least two comparable snapshots. Preserve the prior valid snapshot if a new import fails.
+
+Proposed shared response (agree in hour one; not an existing endpoint):
+
+```json
+{
+  "playerId": "player_example",
+  "snapshotId": "snapshot_example",
+  "period": { "label": "Last completed tournament", "start": "ISO timestamp", "end": "ISO timestamp" },
+  "mapsPlayed": 8,
+  "metrics": {
+    "rating": { "value": null, "definition": "source-defined rating/version" },
+    "kd": { "value": null },
+    "adr": { "value": null },
+    "headshotPercent": { "value": null, "unit": "percent" }
+  },
+  "sources": [{ "id": "source_1", "url": "https://source.example/player", "retrievedAt": "ISO timestamp" }],
+  "isDemo": false
+}
 ```
 
-## Screen requirements
+The null values above illustrate missing-data behavior; they are not statistics to seed as real.
 
-### 1. Sign-up and sign-in
+### Matches and tournament progress
 
-- Email and phone are the required profile fields; display name is optional.
-- Use Jason's selected authentication flow, preferably email magic link.
-- Include clear loading, validation, expired-link, and retry states.
-- Normalize phone through the backend; accept international input or clearly state the supported demo region.
-- Distinguish saved phone number from verified phone ownership.
-- Preserve the selected event across authentication.
-- For presentation accounts, coordinate a safe seeded-login flow that does not weaken public authentication.
+Store event/tournament, participants, scheduled UTC start, stage/round, status, source, and refresh time. Separate esports matches from the platform's community events. Store externally reported results separately from Jason's staff-confirmed prediction settlement.
 
-### 2. Event details
+Give Jason stable IDs and schedule updates. The server must preserve a prediction's original lock deadline: moving a live match's schedule must not silently reopen picks. Jason owns the final lock/settlement policy.
 
-Display title, date/time with timezone, location, description, application deadline, and availability. Explain the process in three short steps: apply, speak with the AI host, receive a staff decision.
+## Manual import implementation
 
-States: open, deadline passed, capacity unavailable, already applied, loading, not found, API error. An existing applicant should see their application rather than a second Apply action.
+Create a documented server-side JSON import command with validation and a dry-run mode. Never paste database credentials into import files. Suggested modules: `backend/src/players.ts`, `backend/src/import-esports.ts`, and a new migration agreed with Jason.
 
-### 3. Application and consent
+Requirements:
 
-Keep the form short. Do not add a long questionnaire that repeats the interview. If interests are collected, confirm the corresponding persistence contract with Jason before adding fields.
+1. Validate fields, source URLs, timestamps, IDs, metric ranges/units, duplicate entries, and references before writing.
+2. Print a safe dry-run summary: rows to insert/update and validation errors, not credentials.
+3. Commit each validated import transactionally. Reject an invalid bundle without partial writes.
+4. Upsert stable entities idempotently; retain versioned stat snapshots and import provenance.
+5. Distinguish sourced real data from synthetic demo data explicitly.
+6. Provide one small valid import bundle and one deliberately invalid example for checks.
+7. Do not run imports against the deployed/shared database until the validated bundle and target service/schema are confirmed within the authorized implementation session.
 
-Show explicit unticked consent before requesting a call. Suggested copy:
+## Proposed endpoints
 
-> I agree to receive an AI FaceTime interview at the number shown. My answers will be transcribed for event-staff review.
-
-Display the destination number and a way to correct it before the call. Save the consent version and timestamp through the backend. Do not claim video recording; raw audio/video recording is outside scope.
-
-Submitting the application creates one application. Starting a call is a separate, intentional action.
-
-### 4. Call readiness and live status
-
-- Show the confirmed destination and expected duration, approximately two to three minutes.
-- Show a prominent **Call me now** button only when eligible.
-- Explain that the call opens in the iPhone's FaceTime app; the website displays progress.
-- Disable duplicate submissions while the request is pending or a call is active.
-- Poll Jason's application endpoint about every three seconds while active; stop polling on terminal states, unmount, and prolonged errors.
-- Do not attempt to place FaceTime calls directly from browser code or expose provider keys.
-
-Status copy mapping:
-
-| Backend state | Fan display |
+| Endpoint | Purpose |
 |---|---|
-| queued | Preparing your AI host |
-| dialing | Your FaceTime call is on its way |
-| connected | Interview in progress |
-| completed + processing | Preparing your interview for review |
-| completed + result ready | Interview received; awaiting staff review |
-| missed | We couldn't reach you; try again when ready |
-| failed | The call couldn't connect; retry when available |
-| canceled | Call canceled |
+| GET /players | Current roster with role/status and checked timestamp |
+| GET /players/:id | Player identity, role, roster provenance |
+| GET /players/:id/stats | Latest valid snapshot for the selected period |
+| GET /players/:id/matches | Upcoming/recent matches and stage labels |
+| GET /esports/tournaments/:id | Tournament progress and source references |
 
-The server controls retry eligibility. A missed call does not mean the application was denied. Do not show a completed interview until result readiness is confirmed.
+Keep existing `/events` for community events. Publish exact JSON fixtures to Khoi and Minh by hour two. Minh owns the highlights and AI-insight endpoints and consumes your player/snapshot IDs.
 
-If the team uses Minh's manual FaceTime-link fallback, change the instructions and label to **Demo FaceTime session — operator assisted**. If browser calling is used, say **Browser interview**. Coordinate supported modes with Jason instead of displaying a fake dialing animation.
-
-### 5. Application decision and invitation
-
-Show review pending, invited, waitlisted, and accepted as distinct states. For an invitation, show event details and **Accept invitation**. Persist acceptance through the backend before displaying success.
-
-Handle expired/withdrawn invitations and full capacity based on API response. A waitlist message should be neutral and must not claim the AI determined the person was not a real fan.
-
-### 6. Profile and history
-
-Display the user's applications and recorded history. New accounts show **No activity recorded yet**. Clearly identify seeded demo activity; do not imply imported FaZe social or purchase history exists.
-
-## Shared API contract
-
-Jason's proposed endpoints:
-
-| Endpoint | Use |
-|---|---|
-| GET /me | Authenticated profile and role |
-| GET /events | Discovery |
-| GET /events/:id | Details |
-| POST /events/:id/applications | Apply and persist consent |
-| GET /applications/:id | Status, current attempt, processing state, decision |
-| POST /applications/:id/call | Request call; 202 returns callAttemptId |
-| POST /applications/:id/accept | Accept invitation |
-| GET /me/activity | Recorded activity |
-
-Agree exact request/response shapes in hour one. Suggested application creation payload: `{ "consentVersion": "ai-interview-v1", "consentAccepted": true }`; the authenticated user determines ownership. Do not send a client-controlled user ID to select the applicant.
-
-Use one typed API client module. Handle 401 by signing in, 403 with access denied, 409 with refreshed state, 429 with retry guidance, and other failures with a useful retry action. Keep fixtures behind an explicit development/demo flag; do not silently fall back to fake success when live requests fail.
-
-## Components and implementation sequence
-
-Suggested components: EventCard, EventDetails, AuthForm, ConsentPanel, PhoneConfirmation, CallStatusPanel, ApplicationTimeline, InvitationCard, ActivityList, LoadingState, EmptyState, ErrorState.
-
-1. Agree design tokens with Khoi and API shapes with Jason.
-2. Build routes against typed fixtures while backend work proceeds.
-3. Implement authentication and preserve intended navigation.
-4. Connect event/application APIs.
-5. Connect readiness, call request, and status polling.
-6. Connect decisions and invitation acceptance.
-7. Replace temporary fixtures in the live flow and verify all error states.
-
-## Accessibility and usability
-
-- Labels on inputs, visible keyboard focus, sufficient contrast.
-- Buttons have clear text and disabled/loading states.
-- Announce meaningful status changes without repeatedly interrupting screen readers.
-- Display dates in the user's locale with an explicit event timezone.
-- Avoid relying on red/green alone for status.
-- Keep touch targets usable and avoid horizontal overflow on iPhone.
-- Refreshing the application page must reconstruct progress from the backend.
-
-## Schedule
+## Timeline and handoffs
 
 | Hours | Deliverable |
 |---|---|
-| 0–2 | Repo inspection, shared styling, API fixtures, routes |
-| 2–6 | Auth, event details, application and consent UI |
-| 6–10 | Live apply → call request → status flow |
-| 10–14 | Decision, acceptance, profile/history |
-| 14–18 | Errors, retries, responsive polish |
-| 18–21 | Real iPhone full-flow rehearsal |
-| 21–24 | Freeze and pitch polish |
+| 0–1 | Verified source approach, data model, IDs, sample response contract |
+| 1–3 | Migration, dry-run importer, first real player snapshot and read endpoints |
+| 3–5 | Current roster import, match/tournament data, error/empty states |
+| 5–7 | Connect Khoi's player page and Minh's snapshot-based AI output |
+| 7–8 | Integrate match IDs with predictions; rehearse refresh and source inspection |
+| 8–10 | Freeze scope, run checks, prepare deployment/import runbook and pitch |
 
-## Acceptance checks
+## Acceptance criteria
 
-- [ ] A fan can authenticate, apply, and request a call from an iPhone-sized viewport.
-- [ ] Call consent is explicit and destination number is visible before dialing.
-- [ ] Double-clicking does not trigger duplicate UI requests; server also enforces this.
-- [ ] Reloading restores application and call state.
-- [ ] A missed call offers the supported retry path without implying rejection.
-- [ ] A live decision appears and invitation acceptance persists.
-- [ ] New users have honest empty history; seeded records are labeled.
-- [ ] Staff data and other fans' details never appear in fan pages.
-- [ ] All live paths use real API responses, with clear labels for any fallback mode.
+- [ ] Current roster status has a source and checked timestamp; coach/benched records are labeled correctly.
+- [ ] One player page has actual sourced metrics with a consistent period and sample size where known.
+- [ ] Missing data remains unavailable rather than invented.
+- [ ] Re-running the same import is safe; invalid imports leave no partial writes.
+- [ ] All displayed matches and tournament positions have source provenance.
+- [ ] Minh can retrieve a specific immutable snapshot for AI analysis.
+- [ ] Khoi can render the agreed responses without fetching sources directly from the browser.
+- [ ] Existing fan/staff/event flows still work after the migration.
 
-Out of scope: native iOS app, merchandise checkout, rewards fulfillment, social-account linking, complex discovery, and notifications beyond the demonstrated call and website status.
-
-## Related assignments
-
-[Project overview](README.md) | [Minh](Johnny.md) | [Jason](Jason.md) | [Johnny](Minh.md) | [Khoi](Khoi.md)
-
-## Implementation status
-
-The fan frontend starter is in [frontend/](frontend/README.md). It has an explicit demo mode and a live API adapter awaiting Jason's authenticated endpoints. Minh and Tuong own Muse and the live call integration.
+Out of scope: SerpAPI, automated scraping infrastructure, tick-by-tick telemetry, a complete multi-game platform, and fabricated performance ratings.

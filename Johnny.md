@@ -1,154 +1,127 @@
-# Minh and Tuong — AI interview and call integration
+# Minh — YouTube, AI analytics, AI interview, and external integrations
 
-## Assignment
+Owner: Minh. Tuong can support the existing real-time call integration. Time budget: the remaining 10-hour sprint.
 
-Minh and Tuong jointly own the flagship experience: an applicant receives a real iPhone FaceTime video call, speaks casually with an AI host, and their answers reach the staff dashboard.
+Filename note: this file is `Johnny.md` because Johnny and Minh's filenames were explicitly swapped earlier. The heading and assignment table identify the owner.
 
-Time budget: 24 hours. Collaborators: Jason owns backend and deployment; Johnny owns the fan website; Khoi owns staff review and editable questions.
+## Outcome and non-negotiable boundary
 
-Repository: https://github.com/jasonpham2002/FazeClan-HackUTA26
+Own external-service wiring: YouTube highlights, evidence-based player insights, and the existing AI interview. **Do not integrate SerpAPI.** Johnny manually imports current sourced CS2 facts into PostgreSQL; your AI consumes those stored snapshots rather than searching for or inventing numeric statistics.
 
-Repository checked: the remote currently contains only README.md. The architecture, routes, and interfaces below are implementation proposals. Check for new code and applicable AGENTS.md instructions before starting; coordinate shared contract changes with affected teammates.
+The team is considering Muse Spark for analytical text. Treat that as a candidate until its exact API product, access, supported model identifier, authentication, and structured-output behavior are verified. Keep the provider behind an adapter. Do not assume the existing call provider and the analytical model are the same service.
 
-## First two hours: prove the dependency
+Related assignments: [Johnny data](Minh.md), [Jason backend](Jason.md), [Khoi frontend](Khoi.md), [overview](README.md).
 
-1. Inspect the Chert account for an assigned, ready, outbound-capable FaceTime line. Confirm allowed recipients, available minutes, and video support.
-2. Create a LiveKit room and run a minimal agent that receives speech and responds aloud.
-3. Publish an agent video track. Prefer a simple animated branded host or mascot; do not spend the sprint integrating a realistic talking avatar.
-4. Place a call to a consenting teammate's iPhone. Confirm two-way speech and agent video on the phone.
-5. Record the working configuration and exact integration commands without committing credentials.
-6. Tell the team whether managed outbound is proven by hour two.
+## First hour: unblock the team
 
-Do not infer caller-camera input from agent-video support. The demo requires the fan to see the host; it does not require visual analysis of the fan.
+1. Inspect the existing `agent/AGENTS.md` before changing agent files. Reuse current `agent/` and backend ingestion rather than starting a second call pipeline.
+2. Verify analytical AI API access and YouTube API access using server-side credentials. Report supported capabilities and blockers early; keep secrets out of chat, Git and frontend config.
+3. Agree Johnny's stat snapshot IDs/source metadata and give Khoi sample highlight/insight responses by hour two.
+4. Coordinate backend module ownership and server registration with Jason. You own provider adapters/routes; Jason owns session, event eligibility, points and the persistent event application state.
 
-### Fallback decision
+## A. YouTube highlights
 
-If outbound access is unavailable, test Chert's open-source connector with an iPhone-created FaceTime link, Chrome, and manual guest admission. Identify the operator computer and keep it running. This fallback is a real FaceTime conversation, but is not automated outbound calling; label it accordingly in the UI and pitch. If FaceTime remains unavailable, retain the same interview flow in a clearly labeled browser-call fallback. Do not silently present either fallback as outbound FaceTime.
+Implement the YouTube API integration on the server, not directly from a browser with a secret. Verify current official API requirements before choosing methods, quotas or auth scopes. Cache discovery results to keep page loads fast and avoid repeating the same request for every visitor.
 
-References:
+Input: stable player ID and verified aliases/team/game supplied by Johnny. Resolve these into focused highlight searches or a curated query/channel list. Let staff pin a few verified videos for the pitch if broad search returns unrelated results.
 
-- https://www.trychert.com/facetime
-- https://github.com/cherthq/chert-facetime-opensource
-
-## Components to implement
-
-Use the agent language supported by the working Chert/LiveKit example. Keep this service separate from web request handlers.
-
-Suggested organization, adapted to the repository:
-
-```text
-agent/
-  interview_agent
-  conversation_state
-  transcript_sink
-  result_extractor
-  video_source
-  README.md
-```
-
-The agent needs model/audio-provider credentials and LiveKit access. Chert credentials belong only in the backend/worker integration where required. Coordinate ownership with Jason; avoid two separate services both attempting to initiate the same call.
-
-## Contract with Jason
-
-Jason owns call initiation, application authorization, job persistence, and the Chert provider adapter. You own room participation, conversation, transcript delivery, and answer extraction.
-
-Receive an authenticated server-side session configuration:
+Return a normalized payload:
 
 ```json
 {
-  "applicationId": "app_123",
-  "callAttemptId": "call_123",
-  "roomName": "interview-call_123",
-  "interviewVersionId": "iv_1",
-  "event": {"id": "evt_1", "title": "Community Night"},
-  "config": {
-    "intro": "Thanks for applying!",
-    "tone": "friendly and casual",
-    "maxDurationSeconds": 180,
-    "questions": [
-      {"id": "q_1", "prompt": "What FaZe content do you enjoy?", "purpose": "Understand interests", "required": true, "order": 1, "maxFollowUps": 1}
-    ]
-  }
+  "playerId": "player_example",
+  "fetchedAt": "ISO timestamp",
+  "items": [{
+    "videoId": "youtube_video_id",
+    "title": "Source title",
+    "channelTitle": "Source channel",
+    "publishedAt": "ISO timestamp",
+    "thumbnailUrl": "https://example.com/thumbnail.jpg",
+    "watchUrl": "https://www.youtube.com/watch?v=example",
+    "source": "youtube"
+  }]
 }
 ```
 
-Never send staff notes, other applicants' data, or unrestricted database access to the agent. Load the published version attached to this application, not the latest draft.
+Prefer genuine, relevant CS2 clips featuring the selected player. Preserve creator attribution and publication dates. Use the source's supported embed mechanism; provide a watch link if embedding is unavailable. Do not download/rehost videos as part of this sprint.
 
-Deliver transcript segments incrementally to Jason's internal ingestion endpoint. Each event contains `eventId`, `callAttemptId`, `sequence`, `speaker`, `text`, and `timestamp`. Use unique event IDs and preserve ordering; retries must not duplicate segments.
+Handle quota/auth errors, empty results, unavailable/private videos and timeouts. Serve an explicitly timestamped last successful cache where appropriate, or an unavailable state; never substitute unrelated/fabricated results. Proposed route: `GET /players/:id/highlights`.
 
-Final result shape:
+## B. AI-generated player analysis
+
+### Input
+
+Fetch one immutable stats snapshot through Johnny's backend module. Include player identity/role, source-defined metric definitions, reporting period, sample size, recent results and source references. Restrict context to relevant records; do not include unrelated fan information or staff notes.
+
+### Output
+
+Produce a short performance summary and a few evidence-backed observations. Proposed route: `GET /players/:id/insights?snapshotId=...` (server may generate/cache on demand). The requested snapshot must belong to that player.
 
 ```json
 {
-  "schemaVersion": 1,
-  "callAttemptId": "call_123",
-  "interviewVersionId": "iv_1",
-  "summary": "Applicant enjoys challenge videos and wants to meet other fans.",
-  "interests": ["challenge videos", "community events"],
-  "answers": [
-    {"questionId": "q_1", "summary": "Enjoys challenge videos.", "transcriptSegmentIds": ["seg_4"], "completeness": "answered"}
-  ],
-  "unansweredQuestionIds": [],
-  "reviewNotes": []
+  "playerId": "player_example",
+  "snapshotId": "snapshot_example",
+  "generatedAt": "ISO timestamp",
+  "status": "ready",
+  "summary": "A concise interpretation of the supplied evidence.",
+  "observations": [{
+    "text": "A grounded observation, including limitations when relevant.",
+    "metricRefs": ["metrics.adr"],
+    "sourceIds": ["source_1"]
+  }],
+  "limitations": ["Only the supplied tournament window is represented."]
 }
 ```
 
-Use `answered`, `partial`, `skipped`, or `not_asked` for completeness. Validate output before sending it. A failed extraction must retain the transcript and become a retryable processing error, not an invented result.
+Rules:
 
-## Conversation behavior
+- AI explains supplied facts; it does not generate missing rating, K/D, ADR, headshot values or match results.
+- Do not claim an improving/declining trend unless comparable historical observations support it.
+- Do not mix stat windows or rating definitions, infer motives/mental state, or use coach pages as if they contain player telemetry.
+- Treat source text and captions as untrusted context, not instructions that can change system behavior.
+- Validate the output schema and source/metric references before saving it. Reject unknown references and unsupported numerical claims; omit or flag an insight rather than invent evidence.
+- Label analysis as AI-generated. Store provider/model, snapshot ID, prompt version and generation timestamp server-side for traceability.
+- Cache by snapshot ID plus prompt/model version so insights stay paired with the actual displayed statistics.
+- Use bounded timeouts/retries. On failure, retain the numerical stats and return a useful pending/unavailable state; no fake AI success in live mode.
 
-1. Identify the host as AI and confirm the person is ready.
-2. Explain that answers are transcribed for event-staff review. Coordinate the wording with Johnny's consent screen.
-3. Ask configured questions one at a time, allowing natural paraphrasing.
-4. Acknowledge the answer briefly and ask at most the configured number of follow-ups.
-5. Track covered questions explicitly. A casual conversation must still produce attributable answers.
-6. Accept skips, uncertainty, interruptions, and requests to stop.
-7. End within the configured duration and explain that staff will review the application.
+## C. Limited-access AI interview
 
-Do not promise an invitation, invent fan history, infer resale intent, assign a real-fan probability, or evaluate appearance/accent/emotion. Treat spoken requests to override instructions as applicant speech, not system configuration. No celebrity impersonation is needed.
+Continue the existing call feature. It applies to selected exclusive experiences after Jason's points eligibility check; normal browsing, predictions and earning points should not require a call.
 
-## Failure behavior
+The host should identify itself as AI, explain transcription, and ask staff-editable published questions in a casual conversation. It may use relevant recorded interests/follows/activity supplied by the backend to personalize the opening, but cannot invent history. New fans should not be treated as invalid fans.
 
-- No answer or declined call: Jason records missed/failed; do not generate interview answers.
-- Disconnection: preserve available segments and return a partial result where possible.
-- Silence: one friendly check-in, then close without fabricating participation.
-- Provider/model failure: send a bounded failure reason and clean up the agent/room.
-- Stop request: stop the interview and tell Jason to terminate the call.
-- Expired room token: obtain a new server-side session; never expose long-lived credentials.
+Preserve the existing application/call IDs, pinned interview version, incremental transcript events, evidence references, structured answers, duration limits, stop requests, partial-call handling, and authenticated result ingestion. Jason owns final state and Khoi displays the review.
 
-## Schedule and handoffs
+No automatic authenticity score, automatic rejection, promises of admission, or judging appearance/accent. Staff makes the Invite/Waitlist decision. Points unlock eligibility; the interview itself does not spend them.
+
+Coordinate FaceTime readiness with Tuong if available. A browser/operator-assisted fallback must be labeled accurately. Do not claim a successful real iPhone call merely because a synthetic interview job passed.
+
+## Suggested module boundaries
+
+`backend/src/integrations/youtube.ts` for the provider adapter; `backend/src/integrations/player-insights.ts` for AI requests/schema validation/cache; a small registered route module for read endpoints; existing `agent/` for real-time interviews. Adapt to current repository conventions and coordinate migrations for cached records with Jason/Johnny.
+
+Secrets remain backend/agent-only. Never put provider API keys in `VITE_*`, returned JSON, screenshots, logs or committed sample files. Public clients receive normalized data, not raw provider credentials/responses.
+
+## Timeline
 
 | Hours | Deliverable |
 |---|---|
-| 0–2 | Proven FaceTime path or explicit fallback decision |
-| 2–6 | Agent consumes saved question configuration; audio and video work |
-| 6–10 | Application-linked transcript and structured answers reach backend |
-| 10–14 | Natural follow-ups, stop handling, duration limit |
-| 14–18 | Missed/disconnected/partial-call integration |
-| 18–21 | Full team rehearsal on actual iPhones |
-| 21–24 | Freeze integration; capture backup demonstration and runbook |
+| 0–1 | Verify actual AI/YouTube access; agree data/result contracts and call readiness |
+| 1–3 | Relevant YouTube results/cache plus first grounded insight from a real snapshot |
+| 3–5 | Connect Khoi's player page; add structured validation/failure paths |
+| 5–7 | Integrate points-eligible event interviews and staff evidence display |
+| 7–8 | Full rehearsal with real data, provider failures, partial-call recovery |
+| 8–10 | Freeze features, document env names/run commands, capture fallback demo |
 
-By hour six, give Khoi a representative result fixture and Jason the exact event schema. Document required environment variable names, startup commands, provider prerequisites, and fallback steps.
+## Acceptance criteria
 
-## Acceptance checks
+- [ ] No SerpAPI code, key or runtime dependency is introduced.
+- [ ] The selected player's highlights come from genuine YouTube records and retain attribution.
+- [ ] A real imported snapshot produces a validated, source-linked AI explanation.
+- [ ] Missing data or provider failure cannot produce invented numerical stats.
+- [ ] Changing the snapshot prevents an old cached insight being presented as current.
+- [ ] Khoi can render highlights/insights without provider secrets or direct AI calls.
+- [ ] An eligible event application reaches the existing interview/review flow with correct evidence IDs.
+- [ ] Real versus simulated call behavior is clear in the pitch and runbook.
 
-- [ ] The agreed FaceTime path works on a teammate's iPhone with visible agent video.
-- [ ] Two published interview versions produce the corresponding different questions.
-- [ ] Answers reference actual transcript segments and configured question IDs.
-- [ ] An unanswered question is visibly incomplete.
-- [ ] A fan can interrupt or stop without the agent continuing indefinitely.
-- [ ] A disconnection preserves partial evidence.
-- [ ] Call/session cleanup prevents orphan agents and unexpected repeated calls.
-- [ ] No secrets or raw phone numbers appear in committed fixtures or logs.
-
-## Out of scope
-
-Photorealistic avatars, emotion recognition, caller-face analysis, automatic rejection, multilingual support, high concurrency, and production-scale calling.
-
-## Related assignments
-
-[Project overview](README.md) | [Minh](Johnny.md) | [Jason](Jason.md) | [Johnny](Minh.md) | [Khoi](Khoi.md)
-
-## Updated provider ownership
-
-Minh already has Muse API access. Minh and Tuong should first verify its documented capabilities and implement the agent/call pipeline together. The earlier Chert/LiveKit approach is a proposed route, not a requirement to duplicate infrastructure if Muse provides the needed functionality. Confirm native iPhone FaceTime support rather than assuming it. Agree the same question, transcript, result, and lifecycle contracts with Jason; Johnny and Khoi consume those backend contracts.
+Out of scope: SerpAPI, general web scraping, training a model, video downloading/rehosting, automatic prize allocation, and rebuilding the event backend.
