@@ -1,0 +1,32 @@
+{
+  "name": "fazeclan-backend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch src/server.ts",
+    "start": "node --env-file-if-exists=.env src/server.ts",
+    "worker": "node --env-file-if-exists=.env src/worker.ts",
+    "migrate": "node --env-file-if-exists=.env src/migrate.ts",
+    "seed": "node --env-file-if-exists=.env src/seed.ts",
+    "cleanup": "node --env-file-if-exists=.env src/seed.ts --cleanup",
+    "check": "tsc --noEmit",
+    "test": "node --env-file-if-exists=.env --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.4.3",
+    "better-auth": "^1.7.25",
+    "fastify": "^5.12.8",
+    "nodemailer": "^10.5.0",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
+    "typescript": "^5.9.3"
+  }
+}

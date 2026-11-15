@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, dataSource } from '../api'
+import { api, ApiError, dataSource, requestMagicLink } from '../api'
 import type { FixtureFanInput } from '../api/types'
 import logo from '../assets/brand/faze-logo-on-dark.png'
 import { ApplicationStatusBadge, CallStatusBadge } from '../components/ui/StatusBadge'
@@ -49,7 +49,7 @@ export function FanEventPage() {
   const queries = useQueryClient()
   const event = useQuery({ queryKey: ['fan', 'event', id], queryFn: () => api.getFanEvent(id) })
   const me = useQuery(meOptions)
-  const apps = useQuery({ ...myAppsOptions, enabled: Boolean(me.data) })
+  const apps = useQuery({ ...myAppsOptions, enabled: me.data?.role === 'fan' })
   const [consent, setConsent] = useState(false)
   const apply = useMutation({ mutationFn: () => api.createFanApplication(id, consent), onSuccess: async result => { await queries.invalidateQueries(); navigate(`/applications/${result.id}`) } })
   if (event.isPending) return <LoadingState />
@@ -57,11 +57,11 @@ export function FanEventPage() {
   const current = apps.data?.find(app => app.event.id === id)
   const unavailable = eventUnavailable(event.data)
   return <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]"><section className="space-y-5"><Link to="/" className="text-sm text-muted underline">Back to events</Link><h1 className={pageTitle}>{event.data.title}</h1><p className="text-lg text-muted">{event.data.description}</p><p>{formatDateTime(event.data.startsAt, event.data.timezone)}<br />{event.data.location}</p><p className="text-sm text-muted">Apply, chat with an AI host, and watch for your invitation. Staff make the final decision.</p></section>
-    <Card title={current ? 'Your application' : 'Apply for access'}>{me.isPending || (me.data && apps.isPending) ? <LoadingState /> : me.isError ? <LoadError error={me.error} retry={() => me.refetch()} /> : apps.isError ? <ErrorState error={apps.error} onRetry={() => apps.refetch()} /> : current ? <div className="space-y-4"><ApplicationStatusBadge status={current.status} /><p>{fanStatusText(current)}</p><Link to={`/applications/${current.id}`} className={linkButtonClass}>View application</Link></div> : unavailable ? <Notice tone="warn">{unavailable}</Notice> : <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!apply.isPending) apply.mutate() }}>
+    <Card title={current ? 'Your application' : 'Apply for access'}>{me.isPending || (me.data?.role === 'fan' && apps.isPending) ? <LoadingState /> : me.isError ? <LoadError error={me.error} retry={() => me.refetch()} /> : apps.isError ? <ErrorState error={apps.error} onRetry={() => apps.refetch()} /> : me.data?.role === 'staff' ? <Notice>Sign in as a fan to apply.</Notice> : current ? <div className="space-y-4"><ApplicationStatusBadge status={current.status} /><p>{fanStatusText(current)}</p><Link to={`/applications/${current.id}`} className={linkButtonClass}>View application</Link></div> : unavailable ? <Notice tone="warn">{unavailable}</Notice> : <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!apply.isPending) apply.mutate() }}>
       {fixture && <Notice tone="warn">Use fictional details. This is a shared demo account; no real call will be placed.</Notice>}
-      <dl className="space-y-3"><div><dt className="text-sm text-muted">Applicant</dt><dd>{me.data?.displayName || me.data?.email}</dd></div><div><dt className="text-sm text-muted">FaceTime destination</dt><dd>{me.data?.phone || 'No number on profile'}</dd></div></dl><Link to="/sign-in" className="text-sm underline">{fixture ? 'Change demo profile' : 'Manage profile'}</Link>
-      <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={consent} onChange={change => setConsent(change.target.checked)} disabled={apply.isPending} required /><span>I agree to receive an AI interview{fixture ? ' (simulated in this demo)' : ' over FaceTime'}. My answers will be transcribed for event-staff review.</span></label>
-      {apply.isError && <ErrorState error={apply.error} />}<Button type="submit" variant="primary" disabled={apply.isPending || !me.data?.phone || !normalizePhone(me.data.phone)}>{apply.isPending ? 'Submitting…' : 'Submit application'}</Button>
+      <dl className="space-y-3"><div><dt className="text-sm text-muted">Applicant</dt><dd>{me.data?.displayName || me.data?.email}</dd></div>{fixture && <div><dt className="text-sm text-muted">Demo phone</dt><dd>{me.data?.phone || 'No number on profile'}</dd></div>}</dl><Link to="/sign-in" className="text-sm underline">{fixture ? 'Change demo profile' : 'Manage profile'}</Link>
+      <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={consent} onChange={change => setConsent(change.target.checked)} disabled={apply.isPending} required /><span>I agree to the demo interview. Staff can review its sample transcript and answers.</span></label>
+      {apply.isError && <ErrorState error={apply.error} />}<Button type="submit" variant="primary" disabled={apply.isPending || (fixture && (!me.data?.phone || !normalizePhone(me.data.phone)))}>{apply.isPending ? 'Submitting…' : 'Submit application'}</Button>
     </form>}</Card>
   </div>
 }
@@ -84,7 +84,7 @@ export function FanApplicationPage() {
   return <div className="space-y-6"><Link to="/profile" className="text-sm underline">My profile</Link><h1 className={pageTitle}>{value.event.title}</h1><div className="flex flex-wrap gap-5"><ApplicationStatusBadge status={value.status} /><CallStatusBadge status={value.call?.status || null} /></div><p className="text-lg text-muted" role="status">{fanStatusText(value)}</p>
     {app.isError && <ErrorState error={app.error} onRetry={() => app.refetch()} />}
     <div className="grid gap-6 md:grid-cols-2"><Card title="Your event"><p>{formatDateTime(value.event.startsAt, value.event.timezone)}<br />{value.event.location}</p><p className="mt-4 text-sm text-muted">Application received {formatDateTime(value.submittedAt)}<br />Interview version {value.interviewVersion.versionNumber}</p></Card><Card title={canRequestCall(value) ? 'Ready when you are' : 'Next steps'}><div className="space-y-4">
-      {canRequestCall(value) ? <><p className="text-sm text-muted">FaceTime destination</p><p className="font-semibold">{value.profile.phone || 'No phone number on file'}</p><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={confirmed === phoneKey} onChange={change => setConfirmed(change.target.checked ? phoneKey : '')} disabled={mutation.isPending} /><span>I confirm this is my number and I am ready for the {fixture ? 'simulated interview' : 'FaceTime call'}.</span></label><Button variant="primary" disabled={mutation.isPending || confirmed !== phoneKey || !value.profile.phone || !normalizePhone(value.profile.phone)} onClick={() => mutation.mutate('call')}>{fixture ? 'Simulate call request' : 'Call me now'}</Button></> : value.status === 'invited' ? <>{acceptUnavailable && <Notice tone="warn">This invitation has expired or all available spots have been claimed. Contact event staff.</Notice>}<Button variant="primary" disabled={mutation.isPending || acceptUnavailable} onClick={() => mutation.mutate('accept')}>Accept invitation</Button></> : <p>{fanStatusText(value)}</p>}
+      {canRequestCall(value) && !fixture ? <><Notice>This runs a sample interview for staff review.</Notice><Button variant="primary" disabled={mutation.isPending} onClick={() => mutation.mutate('call')}>Run sample interview</Button></> : canRequestCall(value) ? <><p className="text-sm text-muted">Demo phone</p><p className="font-semibold">{value.profile.phone || 'No phone number on file'}</p><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={confirmed === phoneKey} onChange={change => setConfirmed(change.target.checked ? phoneKey : '')} disabled={mutation.isPending} /><span>I confirm this is my number and I am ready for the simulated interview.</span></label><Button variant="primary" disabled={mutation.isPending || confirmed !== phoneKey || !value.profile.phone || !normalizePhone(value.profile.phone)} onClick={() => mutation.mutate('call')}>Simulate call request</Button></> : value.status === 'invited' ? <>{acceptUnavailable && <Notice tone="warn">This invitation has expired or all available spots have been claimed. Contact event staff.</Notice>}<Button variant="primary" disabled={mutation.isPending || acceptUnavailable} onClick={() => mutation.mutate('accept')}>Accept invitation</Button></> : <p>{fanStatusText(value)}</p>}
       {mutation.isError && <ErrorState error={mutation.error} />}<Button onClick={() => app.refetch()} disabled={app.isFetching || mutation.isPending}>Refresh status</Button>
     </div></Card></div>
     {fixture && <Card title="Connected demo walkthrough"><div className="space-y-4"><Notice tone="warn">No real call or AI evaluation occurs. Sample interview completion creates explicitly synthetic answers in the shared staff store.</Notice>{['queued','dialing','connected'].includes(value.call?.status || '') && <div className="flex flex-wrap gap-3"><Button onClick={() => mutation.mutate('completed')} disabled={mutation.isPending}>Simulate completed interview</Button><Button onClick={() => mutation.mutate('missed')} disabled={mutation.isPending}>Simulate missed call</Button></div>}<Link to={`/admin/applications/${id}`} className={linkButtonClass}>Review in staff dashboard</Link></div></Card>}
@@ -102,11 +102,34 @@ export function FanProfilePage() {
 }
 
 export function FanSignInPage() {
+  if (!fixture) return <LiveSignIn />
+  return <FixtureProfile />
+}
+
+function LiveSignIn() {
+  const [email, setEmail] = useState('')
+  const mutation = useMutation({
+    mutationFn: () => requestMagicLink(email.trim().toLowerCase(), new URL('/', window.location.origin).href),
+  })
+  return <div className="mx-auto max-w-xl space-y-6"><h1 className={pageTitle}>Sign in</h1><Card>
+    <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!mutation.isPending) mutation.mutate() }}>
+      <Field label="Demo email" htmlFor="live-email" hint="Use an @example.test address, then open the link in Mailpit.">
+        <input id="live-email" value={email} onChange={change => setEmail(change.target.value)}
+          className={inputClass} type="email" required pattern=".+@example[.]test" maxLength={254} />
+      </Field>
+      {mutation.isError && <ErrorState error={mutation.error} />}
+      {mutation.isSuccess && <Notice>Check Mailpit for your sign-in link.</Notice>}
+      <Button type="submit" variant="primary" disabled={mutation.isPending}>Send sign-in link</Button>
+    </form>
+  </Card></div>
+}
+
+function FixtureProfile() {
   const me = useQuery(meOptions)
   const queries = useQueryClient()
   const navigate = useNavigate()
   const [values, setValues] = useState<FixtureFanInput | null>(null)
   const draft = values || { displayName: me.data?.displayName || 'Demo Fan', email: me.data?.email || 'fan@example.com', phone: me.data?.phone || '+12025550123' }
   const mutation = useMutation({ mutationFn: () => api.setFixtureFan(draft), onSuccess: async () => { await queries.invalidateQueries(); navigate('/profile') } })
-  return <div className="mx-auto max-w-xl space-y-6"><h1 className={pageTitle}>{fixture ? 'Your demo profile' : 'Sign in'}</h1>{fixture ? <Card><form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!mutation.isPending) mutation.mutate() }}><Notice tone="warn">Fictional account configuration only. No authentication takes place. Use sample details, which stay in this browser.</Notice>{(['displayName','email','phone'] as const).map(name => <Field key={name} label={{displayName:'Display name',email:'Email',phone:'FaceTime phone number'}[name]} htmlFor={`fan-${name}`}><input id={`fan-${name}`} type={name === 'email' ? 'email' : name === 'phone' ? 'tel' : 'text'} className={inputClass} value={draft[name]} onChange={change => setValues({ ...draft, [name]: change.target.value })} required disabled={mutation.isPending} maxLength={name === 'phone' ? 24 : 120} /></Field>)}{mutation.isError && <ErrorState error={mutation.error} />}<Button type="submit" variant="primary" disabled={mutation.isPending}>Save demo profile</Button></form></Card> : <Card><Notice>Authentication is provided by the backend. No simulated login is available in live mode.</Notice>{import.meta.env.VITE_SIGN_IN_URL ? <a className={`${linkButtonClass} mt-5`} href={import.meta.env.VITE_SIGN_IN_URL}>Continue to sign in</a> : <p className="mt-4 text-muted">The sign-in service is not connected yet. Please try again later.</p>}</Card>}</div>
+  return <div className="mx-auto max-w-xl space-y-6"><h1 className={pageTitle}>Your demo profile</h1><Card><form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!mutation.isPending) mutation.mutate() }}><Notice tone="warn">Fictional account configuration only. No authentication takes place. Use sample details, which stay in this browser.</Notice>{(['displayName','email','phone'] as const).map(name => <Field key={name} label={{displayName:'Display name',email:'Email',phone:'FaceTime phone number'}[name]} htmlFor={`fan-${name}`}><input id={`fan-${name}`} type={name === 'email' ? 'email' : name === 'phone' ? 'tel' : 'text'} className={inputClass} value={draft[name]} onChange={change => setValues({ ...draft, [name]: change.target.value })} required disabled={mutation.isPending} maxLength={name === 'phone' ? 24 : 120} /></Field>)}{mutation.isError && <ErrorState error={mutation.error} />}<Button type="submit" variant="primary" disabled={mutation.isPending}>Save demo profile</Button></form></Card></div>
 }

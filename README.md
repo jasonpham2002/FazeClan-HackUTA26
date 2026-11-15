@@ -27,7 +27,7 @@ The earlier standalone [frontend/](frontend/README.md) is preserved for referenc
 | Minh + Tuong | Muse integration, AI host, call experience, transcripts and structured answers | [Johnny.md](Johnny.md) |
 | Khoi | Staff dashboard, editable questions, application review and analytics | [Khoi.md](Khoi.md) |
 
-Each assignment includes shared contracts, implementation steps, dependencies, a 24-hour schedule and acceptance checks. The fan and staff frontend is connected in [web/](web/README.md); the real backend and AI calls remain integration work.
+Each assignment includes shared contracts, implementation steps, dependencies, a 24-hour schedule and acceptance checks. The fan and staff frontend is connected in [web/](web/README.md); the [local backend](backend/README.md) provides database-backed sign-in, review, and sample interviews. Minh and Tuong own the Muse integration.
 
 ## Shared demo journey
 

@@ -23,7 +23,7 @@ Set in `.env.local` (copy `.env.example`). The choice is made once at startup an
 | `fixtures` (default) | Sample data in this browser's `localStorage`. A yellow "Fixture mode" banner is always visible, with a control to simulate 401/403/409/500 and a reset link. Nothing is sent to a server. |
 | `live` | Calls the API at `VITE_API_BASE_URL`. Any failure is shown as an error; fixture data is never substituted. |
 
-Live mode has only been checked against a missing backend (it shows a network error). **It has not been run against a real API**, because none exists yet.
+See the [live integration guide](INTEGRATION.md#run-with-the-local-backend) for local API setup, Mailpit sign-in, and browser verification.
 
 ## Staff routes
 

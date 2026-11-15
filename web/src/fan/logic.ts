@@ -20,6 +20,6 @@ export function fanStatusText(app: FanApplication): string {
   if (app.status === 'waitlisted') return 'Your application is on the waitlist. A place may become available.'
   if (app.call?.processingStatus === 'failed') return 'Your interview was saved, but processing needs staff attention. You do not need to call again.'
   if (app.status === 'review_pending') return 'Your interview is received. Event staff will review your application.'
-  const messages = { queued: 'Preparing your AI host.', dialing: 'Your FaceTime call is on its way.', connected: 'Your interview is in progress.', missed: "We couldn't reach you. Try again when you are ready.", failed: 'The call could not connect. You can try again.', canceled: 'The call was canceled.', completed: 'Preparing your interview for review.' }
+  const messages = { queued: 'Preparing your AI host.', dialing: 'Preparing the sample interview.', connected: 'Your interview is in progress.', missed: "We couldn't reach you. Try again when you are ready.", failed: 'The call could not connect. You can try again.', canceled: 'The call was canceled.', completed: 'Preparing your interview for review.' }
   return app.call ? messages[app.call.status] : 'Your application is saved. Request an interview when you are ready.'
 }
