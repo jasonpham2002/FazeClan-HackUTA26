@@ -132,3 +132,7 @@ The first real, source-attributed roster/stat bundle and dry-run/import instruct
 ## Vultr release verification
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the backend/worker restart, schema selection and import steps. `npm run verify:deployment -- http://104.238.146.107:3001` checks the public release without credentials. Migration 011 connects imported player IDs to follows; health now checks the esports and engagement schema as well as points.
+
+## Pitch demo: predictions and rewards
+
+Run `npm run seed:engagement` to add a 100-point rehearsal prediction and 100-point sample merch voucher. Follow [DEMO.md](DEMO.md) for fan/staff accounts, settlement, redemption and starting a new round without clearing history.
