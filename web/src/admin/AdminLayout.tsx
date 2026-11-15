@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useMatch, useSearchParams } from 'react-router-d
 import { api, ApiError, dataSource } from '../api'
 import { AccessLayout } from '../components/ui/AccessLayout'
 import { Icon } from '../components/ui/Icon'
+import { AccountMenu } from '../components/ui/AccountMenu'
 import { EmptyState, ErrorState, linkClass, LoadingState } from '../components/ui/ui'
 
 /**
@@ -17,7 +18,7 @@ export function AdminLayout() {
   const events = useQuery({
     queryKey: ['events'],
     queryFn: api.listAdminEvents,
-    enabled: me.data?.role === 'staff' && Boolean(overview || eventRoute),
+    enabled: me.isSuccess && me.data.role === 'staff' && Boolean(overview || eventRoute),
   })
   const selected = overview
     ? events.data?.find(event => event.id === params.get('event')) ?? events.data?.[0]
@@ -32,10 +33,7 @@ export function AdminLayout() {
     body =
       status === 401 ? (
         <EmptyState title="Sign-in required">
-          Sign in with a staff account to open the dashboard.{' '}
-          <Link to="/sign-in" className={linkClass}>
-            Sign in
-          </Link>
+          <Link to="/sign-in?role=staff" className={linkClass}>Sign in as staff</Link>
         </EmptyState>
       ) : (
         <ErrorState error={me.error} onRetry={() => me.refetch()} />
@@ -54,9 +52,9 @@ export function AdminLayout() {
         <>
           <nav aria-label="Staff navigation" className="access-nav">
             <NavLink to={overviewLink} end><Icon name="dashboard" /> Dashboard</NavLink>
-            {me.data?.role === 'staff' && <NavLink to="/admin/events/new"><Icon name="plus" /> New event</NavLink>}
+            {me.isSuccess && me.data.role === 'staff' && <NavLink to="/admin/events/new"><Icon name="plus" /> New event</NavLink>}
           </nav>
-          {me.data?.role === 'staff' && selected && (
+          {me.isSuccess && me.data.role === 'staff' && selected && (
             <div className="min-w-0 border-t border-border pt-3">
               <p className="truncate px-2.5 pb-1 text-xs font-semibold text-subtle" title={selected.title}>{selected.title}</p>
               <nav aria-label="Selected event navigation" className="access-nav">
@@ -76,15 +74,7 @@ export function AdminLayout() {
           </div>
         </>
       }
-      account={me.data && (
-        <div className="access-account">
-          <span aria-hidden="true" className="access-avatar">{(me.data.displayName ?? me.data.email).slice(0, 1).toUpperCase()}</span>
-          <div className="min-w-0">
-            <p className="break-words font-semibold">{me.data.displayName ?? me.data.email}</p>
-            <p className="text-xs text-muted capitalize">{me.data.role}</p>
-          </div>
-        </div>
-      )}
+      account={me.isSuccess && <AccountMenu account={me.data} />}
     >
       {body}
     </AccessLayout>

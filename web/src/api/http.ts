@@ -9,6 +9,8 @@ import type { ApplicationListQuery, ErrorEnvelope } from './types'
  * `credentials: 'include'`. Switch to a bearer header here if that changes.
  */
 export function createHttpClient(baseUrl: string): ApiClient {
+  const authPath = baseUrl.endsWith('/api') ? '/auth' : '/api/auth'
+
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response
     try {
@@ -58,7 +60,17 @@ export function createHttpClient(baseUrl: string): ApiClient {
   const enc = encodeURIComponent
 
   return {
+    requestMagicLink: async input => {
+      await request('POST', `${authPath}/sign-in/magic-link`, {
+        ...input,
+        name: input.email.split('@')[0].slice(0, 80),
+      })
+    },
+    signOut: async () => { await request('POST', `${authPath}/sign-out`, {}) },
+    signInFixture: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the authentication service to sign in.') },
+    signUpFixtureFan: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the authentication service to sign up.') },
     getFanMe: () => request('GET', '/me'),
+    updateFanProfile: async input => { await request('PATCH', '/me', input) },
     setFixtureFan: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the real authentication service to change your profile.') },
     listFanEvents: () => request('GET', '/events'),
     getFanEvent: (id) => request('GET', `/events/${enc(id)}`),

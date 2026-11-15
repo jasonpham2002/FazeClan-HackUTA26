@@ -9,6 +9,8 @@ import type {
   InterviewConfig,
   InterviewState,
   Me,
+  Role,
+  DemoSignInContact,
   Page,
   FanApplication,
   FixtureFanInput,
@@ -33,7 +35,12 @@ export class ApiError extends Error {
  * "saved" is always what the backend returned on a fresh read.
  */
 export interface ApiClient {
+  requestMagicLink(input: { email: string; callbackURL: string; errorCallbackURL: string }): Promise<void>
+  signOut(role: Role): Promise<void>
+  signInFixture(role: Role, contact: DemoSignInContact): Promise<void>
+  signUpFixtureFan(input: FixtureFanInput): Promise<void>
   getFanMe(): Promise<Me>
+  updateFanProfile(input: { displayName: string; phone: string }): Promise<void>
   /** Fixture-only persona configuration; live mode must not implement fake auth. */
   setFixtureFan(input: FixtureFanInput): Promise<void>
   listFanEvents(): Promise<EventRecord[]>

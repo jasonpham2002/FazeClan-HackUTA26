@@ -17,7 +17,7 @@ describe('connected fan and staff fixture store', () => {
     const staff = reopen()
     const before = await staff.getAnalytics('evt_1')
     const id = await apply(fan)
-    expect((await staff.listApplications({ search: 'fan@example.com' })).items.map(item => item.id)).toContain(id)
+    expect((await staff.listApplications({ search: (await fan.getFanMe()).email })).items.map(item => item.id)).toContain(id)
     await fan.requestFanCall(id)
     await fan.simulateFanCall(id, 'completed')
     const review = await staff.getApplication(id)
