@@ -31,15 +31,22 @@ export function registerAuth(app: FastifyInstance, db: Pool, config: Config, sen
         if (!email.toLowerCase().endsWith('@example.test')) {
           throw new Error('The local demo uses @example.test accounts')
         }
+        const incoming = new URL(url)
+        const token = incoming.searchParams.get('token')
+        if (!token) throw new Error('The sign-in link could not be created')
+        const callback = new URL(incoming.searchParams.get('callbackURL') || '/profile', config.baseUrl)
+        const finish = new URL('/sign-in/continue', config.baseUrl)
+        finish.searchParams.set('token', token)
+        finish.searchParams.set('callbackURL', new URL(`${callback.pathname}${callback.search}`, config.baseUrl).href)
         if (sendMail) {
-          await sendMail(email, url)
+          await sendMail(email, finish.href)
           return
         }
         await transport.sendMail({
           from: 'login@example.test',
           to: email,
           subject: 'Sign in to the FaZe demo',
-          text: `Open this single-use link within five minutes: ${url}`,
+          text: `Open this link within five minutes to finish signing in: ${finish.href}`,
         })
       },
     })],

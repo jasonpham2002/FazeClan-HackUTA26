@@ -10,7 +10,7 @@ import { RewardsAdminPage } from './admin/pages/RewardsAdminPage'
 import { InterviewEditorPage } from './admin/pages/InterviewEditorPage'
 import { OverviewPage } from './admin/pages/OverviewPage'
 import { DemoBanner } from './components/ui/DemoBanner'
-import { FanSignUpPage, SignInPage } from './components/ui/SignInPage'
+import { FanSignUpPage, FinishSignInPage, SignInPage } from './components/ui/SignInPage'
 import { EmptyState } from './components/ui/ui'
 import { MatchesPage } from './fan/MatchesPage'
 import { PlayerPage } from './fan/PlayerPage'
@@ -38,6 +38,7 @@ export default function App() {
           <Route path="/profile" element={<FanProfilePage />} />
           <Route path="/profile/edit" element={<FanProfileEditPage />} />
           <Route path="/sign-in" element={<SignInPage />} />
+          <Route path="/sign-in/continue" element={<FinishSignInPage />} />
           <Route path="/sign-up" element={<FanSignUpPage />} />
         </Route>
 

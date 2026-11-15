@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { api, apiBaseUrl, dataSource } from '../../api'
 import { DEMO_FAN_CONTACT, DEMO_STAFF_CONTACT } from '../../api/fixtures/seed'
@@ -28,6 +28,37 @@ export function SignInPage() {
           {staff ? 'Fan sign in' : 'Staff sign in'}
         </Link>
       </div>
+    </div>
+  )
+}
+
+/** The email opens this page. The one-time API link runs only after the page loads, so a mail preview cannot spend it. */
+export function FinishSignInPage() {
+  const [params] = useSearchParams()
+  const token = params.get('token')
+  const started = useRef(false)
+  useEffect(() => {
+    if (!token || started.current) return
+    started.current = true
+    let callbackPath = '/profile'
+    try {
+      const callback = new URL(params.get('callbackURL') || '/profile', window.location.origin)
+      callbackPath = `${callback.pathname}${callback.search}`
+    } catch {
+      callbackPath = '/profile'
+    }
+    const verify = new URL('/api/auth/magic-link/verify', window.location.origin)
+    verify.searchParams.set('token', token)
+    verify.searchParams.set('callbackURL', new URL(callbackPath, window.location.origin).href)
+    window.location.replace(verify.href)
+  }, [params, token])
+  if (!token) return <Navigate to="/sign-in" replace />
+  return (
+    <div className="mx-auto max-w-md space-y-5 py-5 sm:py-10">
+      <h1 className="title-display text-4xl">Signing you in</h1>
+      <Card>
+        <p className="text-muted">Opening your account. This takes a moment.</p>
+      </Card>
     </div>
   )
 }
