@@ -30,10 +30,6 @@ export function resetFixtureData() {
   localStorage.removeItem(FAILURE_KEY)
 }
 
-const liveApi = createHttpClient((import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, ''))
-export const requestMagicLink = liveApi.requestMagicLink
-export const signOut = liveApi.signOut
-export const updateLiveProfile = liveApi.updateProfile
 export const api: ApiClient = dataSource === 'live'
-  ? liveApi
+  ? createHttpClient((import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, ''))
   : createFixtureClient({ storage: localStorage, simulatedFailure: getSimulatedFailure })

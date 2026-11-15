@@ -97,11 +97,8 @@ function review(row: ReviewDto): ApplicationDetail {
  * CONFIRM (Jason): session mechanism. This assumes a cookie session, hence
  * `credentials: 'include'`. Switch to a bearer header here if that changes.
  */
-export function createHttpClient(baseUrl: string): ApiClient & {
-  requestMagicLink(email: string, callbackURL: string): Promise<void>
-  signOut(): Promise<void>
-  updateProfile(input: { displayName: string; phone: string | null }): Promise<Me>
-} {
+export function createHttpClient(baseUrl: string): ApiClient {
+  const authPath = baseUrl.endsWith('/api') ? '/auth' : '/api/auth'
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     let response: Response
     try {
@@ -151,14 +148,17 @@ export function createHttpClient(baseUrl: string): ApiClient & {
   const enc = encodeURIComponent
 
   return {
-    async requestMagicLink(email, callbackURL) {
-      await request('POST', '/api/auth/sign-in/magic-link', { email, name: email.split('@')[0].slice(0, 80), callbackURL })
+    requestMagicLink: async input => {
+      await request('POST', `${authPath}/sign-in/magic-link`, {
+        ...input,
+        name: input.email.split('@')[0].slice(0, 80),
+      })
     },
-    async signOut() {
-      await request('POST', '/api/auth/sign-out', {})
-    },
-    updateProfile: input => request('PATCH', '/me', input),
+    signOut: async () => { await request('POST', `${authPath}/sign-out`, {}) },
+    signInFixture: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the authentication service to sign in.') },
+    signUpFixtureFan: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the authentication service to sign up.') },
     getFanMe: () => request('GET', '/me'),
+    updateFanProfile: async input => { await request('PATCH', '/me', input) },
     setFixtureFan: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the real authentication service to change your profile.') },
     listFanEvents: async () => (await request<{ events: EventDto[] }>('GET', '/events')).events.map(eventRecord),
     getFanEvent: async id => eventRecord(await request<EventDto>('GET', `/events/${enc(id)}`)),

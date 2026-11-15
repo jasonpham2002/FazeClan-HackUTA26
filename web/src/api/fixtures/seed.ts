@@ -15,6 +15,7 @@ import type {
   InterviewResult,
   Me,
   PublishedVersionMeta,
+  Role,
   TranscriptSegment,
 } from '../types'
 
@@ -33,6 +34,7 @@ export interface Db {
   schema: 1
   me: Me
   fan: Me
+  signedOut?: Partial<Record<Role, boolean>>
   events: EventRecord[]
   interviews: Record<string, InterviewEntry>
   applications: StoredApplication[]
@@ -41,6 +43,8 @@ export interface Db {
 const EVENT_ID = 'evt_1'
 const EVENT_TITLE = 'Community Night Dallas'
 const STAFF = { id: 'staff_1', displayName: 'Demo Staff' }
+export const DEMO_STAFF_CONTACT = { email: 'faze.demo.staff@gmail.com', phone: '+12025550124' }
+export const DEMO_FAN_CONTACT = { email: 'faze.demo.fan@gmail.com', phone: '+12025550123' }
 
 interface Exchange {
   questionId: string
@@ -359,8 +363,8 @@ export function createSeed(): Db {
 
   return {
     schema: 1,
-    me: { id: STAFF.id, email: 'staff@example.com', displayName: STAFF.displayName, role: 'staff' },
-    fan: { id: 'fan_demo', email: 'fan@example.com', displayName: 'Demo Fan', phone: '+12025550123', role: 'fan' },
+    me: { ...STAFF, ...DEMO_STAFF_CONTACT, role: 'staff' },
+    fan: { id: 'fan_demo', ...DEMO_FAN_CONTACT, displayName: 'Demo Fan', role: 'fan' },
     events: [
       {
         id: EVENT_ID,

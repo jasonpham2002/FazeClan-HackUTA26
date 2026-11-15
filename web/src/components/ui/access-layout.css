@@ -101,6 +101,12 @@
   background: var(--color-surface-2);
   color: var(--color-text);
   font-weight: 700;
+  cursor: pointer;
+}
+
+.access-avatar:hover,
+.access-avatar[aria-expanded='true'] {
+  background: var(--color-border);
 }
 
 .access-account { max-width: 18rem; font-size: 0.875rem; line-height: 1.25; }
