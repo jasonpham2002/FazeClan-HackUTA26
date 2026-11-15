@@ -1,0 +1,117 @@
+.access-frame {
+  min-height: 100vh;
+  padding: clamp(0.5rem, 2vw, 1.5rem);
+}
+
+.access-shell {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  max-width: 100rem;
+  min-height: calc(100vh - 3rem);
+  margin-inline: auto;
+  overflow: clip;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-bg) 85%, transparent);
+}
+
+.access-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.15rem 0.75rem;
+  border-inline-end: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.access-brand,
+.access-nav a,
+.access-account {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.access-brand {
+  padding-inline: 0.5rem;
+  font-weight: 700;
+}
+
+.access-brand img {
+  width: 2.75rem;
+  height: auto;
+  padding: 0.2rem;
+  border-radius: 0.4rem;
+  background: #111111;
+}
+
+.access-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.access-nav a {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
+
+.access-nav a:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.access-nav a[aria-current='page'] {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  color: var(--color-accent-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.access-sidebar-bottom {
+  margin-top: auto;
+}
+
+.access-credit {
+  padding-inline: 0.5rem;
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+}
+
+.access-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 4.25rem;
+  padding: 0.75rem clamp(0.8rem, 3vw, 2rem);
+  border-bottom: 2px solid var(--color-accent);
+}
+
+.access-avatar {
+  display: grid;
+  flex: none;
+  width: 2.125rem;
+  height: 2.125rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.access-account { max-width: 18rem; font-size: 0.875rem; line-height: 1.25; }
+.access-content { padding: clamp(0.8rem, 3vw, 2rem); }
+
+@media (min-width: 48rem) {
+  .access-nav { flex-direction: column; }
+}
+
+@media (max-width: 47.99rem) {
+  .access-shell { grid-template-columns: minmax(0, 1fr); }
+  .access-sidebar { gap: 0.6rem; border-inline-end: 0; border-bottom: 1px solid var(--color-border); }
+  .access-credit { display: none; }
+}

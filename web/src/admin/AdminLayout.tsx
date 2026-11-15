@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, NavLink, Outlet } from 'react-router-dom'
-import { api, ApiError } from '../api'
-import fazeLogo from '../assets/brand/faze-logo-on-dark.png'
-import { ThemeToggle } from '../components/ui/ThemeToggle'
+import { Link, NavLink, Outlet, useMatch, useSearchParams } from 'react-router-dom'
+import { api, ApiError, dataSource } from '../api'
+import { AccessLayout } from '../components/ui/AccessLayout'
+import { Icon } from '../components/ui/Icon'
 import { EmptyState, ErrorState, linkClass, LoadingState } from '../components/ui/ui'
 
 /**
@@ -11,6 +11,18 @@ import { EmptyState, ErrorState, linkClass, LoadingState } from '../components/u
  */
 export function AdminLayout() {
   const me = useQuery({ queryKey: ['me'], queryFn: api.getMe })
+  const overview = useMatch('/admin')
+  const eventRoute = useMatch('/admin/events/:eventId/*')
+  const [params] = useSearchParams()
+  const events = useQuery({
+    queryKey: ['events'],
+    queryFn: api.listAdminEvents,
+    enabled: me.data?.role === 'staff' && Boolean(overview || eventRoute),
+  })
+  const selected = overview
+    ? events.data?.find(event => event.id === params.get('event')) ?? events.data?.[0]
+    : events.data?.find(event => event.id === eventRoute?.params.eventId)
+  const overviewLink = selected ? `/admin?event=${encodeURIComponent(selected.id)}` : '/admin'
 
   let body
   if (me.isPending) {
@@ -35,27 +47,46 @@ export function AdminLayout() {
   }
 
   return (
-    <>
-      <header className="staff-header border-b-2 border-accent">
-        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 sm:px-6">
-          <NavLink to="/admin" end className="flex items-center gap-5">
-            {/* Toolkit logo for dark backgrounds, unmodified; brand minimum width is 40px. */}
-            <span className="faze-logo"><img src={fazeLogo} alt="FaZe Clan" width={60} height={40} className="h-10 w-auto" /></span>
-            <span className="title-display text-xl">Staff dashboard</span>
-          </NavLink>
-          <span className="text-[0.8125rem] text-muted">Independent concept for FaZe Clan</span>
-          <Link to="/" className={linkClass}>Fan experience</Link>
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-            {me.data && (
-              <span className="text-[0.8125rem] text-muted">
-                Signed in as <span className="text-text">{me.data.displayName ?? me.data.email}</span> · {me.data.role}
-              </span>
+    <AccessLayout
+      home="/admin"
+      title="Staff dashboard"
+      sidebar={
+        <>
+          <nav aria-label="Staff navigation" className="access-nav">
+            <NavLink to={overviewLink} end><Icon name="dashboard" /> Dashboard</NavLink>
+            {me.data?.role === 'staff' && <NavLink to="/admin/events/new"><Icon name="plus" /> New event</NavLink>}
+          </nav>
+          {me.data?.role === 'staff' && selected && (
+            <div className="min-w-0 border-t border-border pt-3">
+              <p className="truncate px-2.5 pb-1 text-xs font-semibold text-subtle" title={selected.title}>{selected.title}</p>
+              <nav aria-label="Selected event navigation" className="access-nav">
+                <NavLink to={`/admin/events/${selected.id}`} end><Icon name="calendar" /> Event details</NavLink>
+                <NavLink to={`/admin/events/${selected.id}/applications`}><Icon name="list" /> Applications</NavLink>
+                <NavLink to={`/admin/events/${selected.id}/interview`}><Icon name="interview" /> Interview</NavLink>
+              </nav>
+            </div>
+          )}
+          <div className="access-sidebar-bottom">
+            {dataSource === 'fixtures' && (
+              <nav aria-label="Demo navigation" className="access-nav">
+                <Link to="/"><Icon name="arrowRight" /> Fan experience</Link>
+              </nav>
             )}
-            <ThemeToggle />
+            <p className="access-credit">Independent FaZe Clan concept</p>
+          </div>
+        </>
+      }
+      account={me.data && (
+        <div className="access-account">
+          <span aria-hidden="true" className="access-avatar">{(me.data.displayName ?? me.data.email).slice(0, 1).toUpperCase()}</span>
+          <div className="min-w-0">
+            <p className="break-words font-semibold">{me.data.displayName ?? me.data.email}</p>
+            <p className="text-xs text-muted capitalize">{me.data.role}</p>
           </div>
         </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6">{body}</main>
-    </>
+      )}
+    >
+      {body}
+    </AccessLayout>
   )
 }
