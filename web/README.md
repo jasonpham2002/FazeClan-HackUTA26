@@ -3,7 +3,7 @@
 One Vite + React + TypeScript app for both audiences:
 
 - **Staff dashboard** (Khoi) under `/admin` — built.
-- **Fan pages** (Minh) under `/`, `/sign-in`, `/events/:id`, `/applications/:id`, `/profile` — not built; `src/fan/FanPlaceholder.tsx` is a stand-in to replace.
+- **Fan pages** (Johnny) under `/`, `/sign-in`, `/events/:id`, `/applications/:id`, `/profile` ? connected through the shared API adapter.
 
 ## Run it
 
@@ -21,8 +21,8 @@ Set in `.env.local` (copy `.env.example`). The choice is made once at startup an
 
 | `VITE_DATA_SOURCE` | Behavior |
 |---|---|
-| `fixtures` (default) | Sample data in this browser's `localStorage`. A yellow "Fixture mode" banner is always visible, with a control to simulate 401/403/409/500 and a reset link. Nothing is sent to a server. |
-| `live` | Calls the API at `VITE_API_BASE_URL`. Any failure is shown as an error; fixture data is never substituted. |
+| `fixtures` (explicit opt-in) | Sample data in this browser's `localStorage`. A yellow "Fixture mode" banner is always visible, with a control to simulate 401/403/409/500 and a reset link. Nothing is sent to a server. |
+| `live` (default) | Calls the API at `VITE_API_BASE_URL`. Any failure is shown as an error; fixture data is never substituted. |
 
 See the [live integration guide](INTEGRATION.md#run-with-the-local-backend) for local API setup, Mailpit sign-in, and browser verification.
 
@@ -102,3 +102,11 @@ src/
 ## Connected integration
 
 Fan and staff fixture changes now synchronize in the same tab and across tabs. See [INTEGRATION.md](INTEGRATION.md) for the end-to-end demo, shared fan endpoint contracts, intentional differences from the older standalone frontend, and remaining live-backend work. The staff branch is preserved; the prior standalone `frontend/` is retained as a reference, not the connected entry point.
+
+## Accounts are not reaching PostgreSQL
+
+The default mode is now `live`. Development requests use `http://127.0.0.1:3001` unless overridden; production defaults to same-origin `/api`. Fixture mode must be explicitly selected with `VITE_DATA_SOURCE=fixtures` and intentionally stores accounts only in browser localStorage. Invalid mode names fail rather than silently enabling fixtures.
+
+Check `web/.env.local` for an old `VITE_DATA_SOURCE=fixtures` setting. Change it to `live` and restart Vite (or rebuild deployed assets). Existing fixture accounts remain local and are not automatically imported as verified database accounts.
+
+The backend requires populated `backend/.env` values from your own Tiger credentials, successful migrations, and a running API. See [backend setup](../backend/README.md). The local demo authenticates `@example.test` addresses using a magic link from Mailpit. Complete the link verification to create a verified account; then enter profile details. A disconnected backend is shown as an error, never replaced by browser-only signup.

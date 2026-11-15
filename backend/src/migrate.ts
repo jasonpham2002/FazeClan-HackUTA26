@@ -10,7 +10,13 @@ export async function migrate(db: Pool, schema: string): Promise<void> {
   const names = (await readdir(migrationDirectory)).filter((name) => /^\d{3}_[a-z_]+\.sql$/.test(name)).sort();
   const migrations = await Promise.all(names.map(async (name) => {
     const sql = await readFile(new URL(name, migrationDirectory), "utf8");
-    return { name, sql, checksum: createHash("sha256").update(sql).digest("hex") };
+    // Git may check identical SQL out as LF on macOS and CRLF on Windows.
+    // Accept both historical hashes, then converge the ledger on LF hashes.
+    const normalized = sql.replace(/\r\n/g, "\n");
+    const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+    return { name, sql, checksum: hash(normalized), compatibleChecksums: new Set([
+      hash(sql), hash(normalized), hash(normalized.replace(/\n/g, "\r\n")),
+    ]) };
   }));
   if (!migrations.length) throw new Error("No database migrations found");
 
@@ -30,8 +36,11 @@ export async function migrate(db: Pool, schema: string): Promise<void> {
     const applied = new Map(rows.map(({ name, checksum }) => [name, checksum]));
     for (const migration of migrations) {
       const checksum = applied.get(migration.name);
-      if (checksum && checksum !== migration.checksum) {
+      if (checksum && !migration.compatibleChecksums.has(checksum)) {
         throw new Error(`Applied migration ${migration.name} has changed`);
+      }
+      if (checksum && checksum !== migration.checksum) {
+        await client.query("UPDATE schema_migrations SET checksum=$2 WHERE name=$1", [migration.name, migration.checksum]);
       }
       if (!checksum) {
         await client.query(migration.sql);

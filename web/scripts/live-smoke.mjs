@@ -19,10 +19,10 @@ for (const context of [staff, fan]) context.on('weberror', error => errors.push(
 
 async function signIn(context, email) {
   const page = await context.newPage()
-  await page.goto(web + '/sign-in')
-  await page.getByRole('textbox', { name: 'Demo email' }).fill(email)
+  await page.goto(web + (email === 'staff@example.test' ? '/sign-in?role=staff' : '/sign-in'))
+  await page.getByRole('textbox', { name: 'Email address' }).fill(email)
   await page.getByRole('button', { name: 'Send sign-in link' }).click()
-  const mailpitLink = page.getByRole('link', { name: 'Open Mailpit', exact: true })
+  const mailpitLink = page.getByRole('link', { name: 'Mailpit', exact: true })
   await mailpitLink.waitFor()
   assert.equal(await mailpitLink.getAttribute('href'), 'http://127.0.0.1:8025')
   const inbox = new URL('/view/latest.txt', mailpit)
@@ -33,7 +33,18 @@ async function signIn(context, email) {
   assert.ok(url, 'Mailpit email includes the sign-in link')
   assert.equal(new URL(url).origin, api)
   await page.goto(url)
-  await page.waitForURL(web + '/')
+  if (email === 'staff@example.test') {
+    await page.waitForURL(web + '/admin')
+  } else {
+    // Wait for the setup redirect, not the intermediate /profile page.
+    await page.waitForURL(web + '/profile/edit')
+    await page.getByRole('textbox', { name: 'First name', exact: true }).fill('Integration')
+    await page.getByRole('textbox', { name: 'Last name', exact: true }).fill('Fan')
+    await page.getByRole('textbox', { name: 'Phone number', exact: true }).fill('+12025550123')
+    await page.getByRole('button', { name: 'Save profile', exact: true }).click()
+    await page.waitForURL(web + '/profile')
+  }
+  await page.goto(web + '/')
   return page
 }
 
@@ -92,7 +103,7 @@ try {
   assert.equal(analytics.callsConnected, previousCounts.callsConnected + 1)
   assert.equal(analytics.accepted, previousCounts.accepted + 1)
   assert.deepEqual(errors, [])
-  console.log('PASS: separate staff and fan sessions through Mailpit, publish, apply, sample interview, review, invite, accept, and persisted analytics.')
+  console.log('PASS: separate staff and fan sessions through email magic links, publish, apply, sample interview, review, invite, accept, and persisted analytics.')
 } finally {
   await browser.close()
 }
