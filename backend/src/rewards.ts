@@ -9,7 +9,7 @@ import { lockFan, pointAmount, pointBalance } from './points.ts'
 import { idParams } from './views.ts'
 
 const rewardKindInput = z.enum(['merchandise', 'merch', 'raffle', 'early_access', 'priority'])
-  .transform(value => (value === 'merch' ? 'merchandise' : value))
+  .transform(value => (value === 'merchandise' ? 'merch' : value))
 
 const rewardFields = z.strictObject({
   title: z.string().trim().min(1).max(120),
@@ -24,14 +24,14 @@ const createReward = rewardFields.extend({
   kind: rewardKindInput,
   isDemo: z.boolean().default(true),
 })
-const editReward = rewardFields.extend({
+const editReward = rewardFields.partial().extend({
   kind: rewardKindInput.optional(),
 }).refine(input => Object.keys(input).length > 0)
 const redeemBody = z.strictObject({ idempotencyKey: z.uuid().optional() })
 
 const rewardColumns = `id, title, description, kind, terms, point_cost AS "pointCost",
   COALESCE(point_cost, 0) AS cost, stock, active, is_demo AS "isDemo",
-  (active AND kind='merchandise' AND stock>0) AS redeemable`
+  (active AND kind='merch' AND point_cost IS NOT NULL AND (stock IS NULL OR stock>0)) AS redeemable`
 const claimColumns = `r.id, r.reward_id AS "rewardId", rw.title AS "rewardTitle", -p.delta AS "pointCost",
   -p.delta AS cost, r.status, r.created_at AS "createdAt"`
 const fanJson = `jsonb_build_object(
@@ -90,8 +90,10 @@ export function registerRewardRoutes(app: FastifyInstance, db: Pool, auth: Auth)
       }
       const { rows: [reward] } = await client.query('SELECT * FROM rewards WHERE id=$1 FOR UPDATE', [id])
       if (!reward) fail(404, 'REWARD_NOT_FOUND', 'Reward not found.')
-      if (!reward.active || reward.kind !== 'merchandise') fail(409, 'REWARD_UNAVAILABLE', 'This reward is unavailable.')
-      if (reward.stock === null || reward.stock <= 0) fail(409, 'REWARD_OUT_OF_STOCK', 'This reward is out of stock.')
+      if (!reward.active || reward.kind !== 'merch' || reward.point_cost === null) {
+        fail(409, 'REWARD_UNAVAILABLE', 'This reward is unavailable.')
+      }
+      if (reward.stock !== null && reward.stock <= 0) fail(409, 'REWARD_OUT_OF_STOCK', 'This reward is out of stock.')
       if (await pointBalance(client, fan.id) < reward.point_cost) {
         fail(409, 'INSUFFICIENT_POINTS', 'You need more points to claim this reward.')
       }
@@ -101,10 +103,12 @@ export function registerRewardRoutes(app: FastifyInstance, db: Pool, auth: Auth)
         INSERT INTO point_transactions (user_id,delta,reason,source_type,source_id)
         VALUES ($1,$2,$3,'redemption',$4) RETURNING id
       `, [fan.id, -reward.point_cost, `Reward claimed: ${reward.title}`, claimId])
-      await client.query('UPDATE rewards SET stock=stock-1 WHERE id=$1', [id])
+      if (reward.stock !== null) {
+        await client.query('UPDATE rewards SET stock=stock-1 WHERE id=$1', [id])
+      }
       const { rows: [claim] } = await client.query(`
-        INSERT INTO reward_redemptions (id,user_id,reward_id,point_transaction_id,idempotency_key)
-        VALUES ($1,$2,$3,$4,$5)
+        INSERT INTO reward_redemptions (id,user_id,reward_id,point_transaction_id,idempotency_key,status)
+        VALUES ($1,$2,$3,$4,$5,'requested')
         RETURNING id, reward_id AS "rewardId", $7::text AS "rewardTitle", $6::int AS "pointCost",
           $6::int AS cost, status, created_at AS "createdAt"
       `, [claimId, fan.id, id, debit.id, idempotencyKey, reward.point_cost, reward.title])
@@ -123,8 +127,8 @@ export function registerRewardRoutes(app: FastifyInstance, db: Pool, auth: Auth)
     await auth.requireUser(request, 'staff')
     const parsed = createReward.parse(request.body)
     const resolvedCost = resolvePointCost(parsed.pointCost, parsed.cost)
-    if (parsed.kind === 'merchandise' && (resolvedCost === null || resolvedCost === undefined || parsed.stock === null || parsed.stock === undefined)) {
-      fail(400, 'INVALID_REWARD', 'Set a point cost and stock for merchandise.')
+    if (parsed.kind === 'merch' && (resolvedCost === null || resolvedCost === undefined)) {
+      fail(400, 'INVALID_REWARD', 'Set a positive point cost for merchandise.')
     }
     const { rows: [reward] } = await db.query(`
       INSERT INTO rewards (title,description,kind,terms,point_cost,stock,active,is_demo)
@@ -177,7 +181,7 @@ export function registerRewardRoutes(app: FastifyInstance, db: Pool, auth: Auth)
       return reward
     } catch (error) {
       if ((error as { code?: string }).code === '23514') {
-        fail(400, 'INVALID_REWARD', 'Merchandise requires a positive point cost and non-negative stock.')
+        fail(400, 'INVALID_REWARD', 'Merchandise requires a positive point cost and optional non-negative stock.')
       }
       throw error
     }

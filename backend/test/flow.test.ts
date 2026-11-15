@@ -201,14 +201,25 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
     read(await request('POST', pickUrl, firstFan, pick), 201);
     assert.equal(errorCode(await request('POST', pickUrl, firstFan, pick), 409), 'DUPLICATE_PICK');
     assert.equal((await request('POST', settleUrl, firstFan, settle)).statusCode, 403);
-    assert.equal(errorCode(await request('POST', settleUrl, staff, settle), 409), 'MARKET_OPEN');
+
+    // Settling an open market before locksAt closes picks and settles immediately.
+    read(await request('POST', `/predictions/markets/${customMarket.id}/pick`, secondFan, { optionId: 'opt_2' }), 201);
+    read(await request('POST', `${markets}/${customMarket.id}/settle`, staff, { optionId: 'opt_1', sourceUrl: settle.sourceUrl }), 200);
+    assert.equal(errorCode(await request('POST', `/predictions/markets/${customMarket.id}/pick`, firstFan, { optionId: 'opt_1' }), 409), 'MARKET_LOCKED');
+
     assert.equal(read<{ total: number }>(await request('GET', `${markets}/${match.id}/picks`, staff), 200).total, 1);
-    const adminMarkets = read<{ markets: { id: string; pickCount: number; picksByOption: Record<string, number> }[] }>(
+    const adminMarkets = read<{
+      markets: { id: string; status: string; state: string; result: { optionId: string } | null; pickCount: number; picksByOption: Record<string, number> }[];
+    }>(
       await request('GET', markets, staff), 200,
     ).markets;
     const matchAdmin = adminMarkets.find(row => row.id === match.id);
     assert.equal(matchAdmin?.pickCount, 1);
     assert.deepEqual(matchAdmin?.picksByOption, { a: 1, b: 0 });
+    const earlySettledAdmin = adminMarkets.find(row => row.id === customMarket.id);
+    assert.equal(earlySettledAdmin?.status, 'settled');
+    assert.equal(earlySettledAdmin?.state, 'settled');
+    assert.equal(earlySettledAdmin?.result?.optionId, 'opt_1');
     const anonMarkets = read<{ markets: { id: string; myPick: unknown }[] }>(
       await request('GET', '/predictions/markets'), 200,
     ).markets;
@@ -238,10 +249,19 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
     read(await request('POST', `/predictions/markets/${placement.id}/pick`, secondFan, { optionId: 'first' }), 201);
     await db.query('UPDATE prediction_markets SET locks_at=clock_timestamp() WHERE id=$1', [placement.id]);
     read(await request('POST', `${markets}/${placement.id}/settle`, staff, { ...settle, optionId: null }), 200);
-    const secondMarkets = read<{ markets: { id: string; status: string; myPick: unknown }[] }>(
+    const secondMarkets = read<{ markets: { id: string; status: string; state: string; result: unknown; myPick: unknown }[] }>(
       await request('GET', '/predictions/markets', secondFan), 200).markets;
-    assert.equal(secondMarkets.find(row => row.id === placement.id)?.status, 'void');
+    const voidedFanMarket = secondMarkets.find(row => row.id === placement.id);
+    assert.equal(voidedFanMarket?.status, 'void');
+    assert.equal(voidedFanMarket?.state, 'void');
+    assert.equal(voidedFanMarket?.result, null);
     assert.equal(secondMarkets.find(row => row.id === match.id)?.myPick, null);
+    const adminMarketsAfterVoid = read<{ markets: { id: string; status: string; state: string; result: unknown }[] }>(
+      await request('GET', markets, staff), 200).markets;
+    const voidedAdminMarket = adminMarketsAfterVoid.find(row => row.id === placement.id);
+    assert.equal(voidedAdminMarket?.status, 'void');
+    assert.equal(voidedAdminMarket?.state, 'void');
+    assert.equal(voidedAdminMarket?.result, null);
     const winnerLedger = read<{ entries: { sourceType: string; delta: number }[]; balance: number }>(
       await request('GET', '/me/points', firstFan), 200);
     assert.equal(winnerLedger.balance, 100);
@@ -252,18 +272,24 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
     assert.equal((await request('POST', adjustUrl, firstFan, adjustment(1))).statusCode, 403);
 
     const demoReward = { kind: 'merchandise', title: 'Sample FaZe merch', terms: 'Proposed demo benefit', pointCost: 50, stock: 10 };
-    merchId = read<{ id: string }>(await request('POST', '/admin/rewards', staff, demoReward), 201).id;
+    const createdDemoReward = read<{ id: string; kind: string; redeemable: boolean }>(await request('POST', '/admin/rewards', staff, demoReward), 201);
+    assert.equal(createdDemoReward.kind, 'merch');
+    assert.equal(createdDemoReward.redeemable, true);
+    merchId = createdDemoReward.id;
     const redeemUrl = `/rewards/${merchId}/redeem`;
     const claimInput = { idempotencyKey: randomUUID() };
-    const claim = read(await request('POST', redeemUrl, firstFan, claimInput), 201);
+    const claim = read<{ status: string }>(await request('POST', redeemUrl, firstFan, claimInput), 201);
+    assert.equal(claim.status, 'requested');
     assert.deepEqual(read(await request('POST', redeemUrl, firstFan, claimInput), 200), claim);
-    const concept = read<{ id: string }>(await request('POST', '/admin/rewards', staff,
+    const concept = read<{ id: string; kind: string; redeemable: boolean }>(await request('POST', '/admin/rewards', staff,
       { kind: 'raffle', title: 'Sample raffle concept', terms: 'Proposed benefit' }), 201);
+    assert.equal(concept.kind, 'raffle');
+    assert.equal(concept.redeemable, false);
     assert.equal(errorCode(await request('POST', `/rewards/${concept.id}/redeem`, firstFan, claimInput), 409), 'IDEMPOTENCY_CONFLICT');
     assert.equal(errorCode(await request('POST', `/rewards/${concept.id}/redeem`, firstFan, { idempotencyKey: randomUUID() }), 409), 'REWARD_UNAVAILABLE');
     assert.deepEqual(read(await request('GET', '/me/redemptions', secondFan), 200), { redemptions: [] });
-    const anonRewards = read<{ rewards: { id: string; title: string; cost: number }[] }>(await request('GET', '/rewards'), 200).rewards;
-    assert.ok(anonRewards.some(row => row.title === 'Sample FaZe merch' && row.cost === 50));
+    const anonRewards = read<{ rewards: { id: string; title: string; kind: string; cost: number }[] }>(await request('GET', '/rewards'), 200).rewards;
+    assert.ok(anonRewards.some(row => row.title === 'Sample FaZe merch' && row.kind === 'merch' && row.cost === 50));
     const { rewards } = read<{ rewards: { id: string; stock: number }[] }>(await request('GET', '/rewards', firstFan), 200);
     assert.equal(rewards.find(row => row.id === merchId)?.stock, 9);
     assert.equal(await balance(firstFan), 50);
@@ -496,20 +522,199 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
     const seededRewardId = read<{ rewards: { id: string }[] }>(await request('GET', '/rewards'), 200).rewards
       .find(row => row.id !== merchId && row.id !== lastItem.id)?.id;
     assert.ok(seededRewardId);
-    const headerClaim = read<{ rewardTitle: string; cost: number }>(
+    const headerClaim = read<{ rewardTitle: string; cost: number; status: string }>(
       await request('POST', `/rewards/${seededRewardId}/redeem`, secondFan, {}, { 'Idempotency-Key': headerRedeemKey }),
       201,
     );
     assert.equal(headerClaim.rewardTitle, 'Sample FaZe merch');
     assert.equal(headerClaim.cost, 50);
+    assert.equal(headerClaim.status, 'requested');
     assert.deepEqual(
       read(await request('POST', `/rewards/${seededRewardId}/redeem`, secondFan, {}, { 'Idempotency-Key': headerRedeemKey }), 200),
       headerClaim,
     );
+    const secondRedemptions = read<{ redemptions: Array<{ id: string; status: string }> }>(
+      await request('GET', '/me/redemptions', secondFan), 200,
+    ).redemptions;
+    assert.ok(secondRedemptions.some(row => row.status === 'requested'));
     const adminRedemptions = read<{
-      redemptions: Array<{ id: string; rewardTitle: string; cost: number; fan: { id: string; email: string } }>;
+      redemptions: Array<{ id: string; rewardTitle: string; cost: number; status: string; fan: { id: string; email: string } }>;
     }>(await request('GET', '/admin/redemptions', staff), 200).redemptions;
-    assert.ok(adminRedemptions.some(row => row.rewardTitle === 'Sample FaZe merch' && row.cost === 50 && row.fan.id === secondId));
+    assert.ok(adminRedemptions.some(row =>
+      row.rewardTitle === 'Sample FaZe merch' && row.cost === 50 && row.status === 'requested' && row.fan.id === secondId));
+
+    // Unlimited-stock merch reward (stock: null) creation, patching, and redemption, plus merch cost enforcement
+    const unlimitedReward = read<{ id: string; kind: string; stock: number | null; cost: number; redeemable: boolean }>(
+      await request('POST', '/admin/rewards', staff, {
+        title: 'Unlimited FaZe Sticker',
+        description: 'Not stock-limited.',
+        kind: 'merch',
+        cost: 25,
+        stock: null,
+        active: true,
+        terms: 'Proposed demo benefit',
+      }),
+      201,
+    );
+    assert.equal(unlimitedReward.kind, 'merch');
+    assert.equal(unlimitedReward.stock, null);
+    assert.equal(unlimitedReward.cost, 25);
+    assert.equal(unlimitedReward.redeemable, true);
+    assert.equal(errorCode(await request('POST', '/admin/rewards', staff, {
+      title: 'Missing cost merch',
+      kind: 'merch',
+      stock: null,
+    }), 400), 'INVALID_REWARD');
+    const patchedUnlimited = read<{ id: string; stock: number | null; redeemable: boolean }>(
+      await request('PATCH', `/admin/rewards/${merchId}`, staff, { stock: null }),
+      200,
+    );
+    assert.equal(patchedUnlimited.stock, null);
+    assert.equal(patchedUnlimited.redeemable, true);
+    assert.equal(errorCode(await request('PATCH', `/admin/rewards/${merchId}`, staff, { cost: null }), 400), 'INVALID_REWARD');
+    const patchedFinite = read<{ stock: number | null; redeemable: boolean }>(
+      await request('PATCH', `/admin/rewards/${merchId}`, staff, { stock: 0 }),
+      200,
+    );
+    assert.equal(patchedFinite.stock, 0);
+    assert.equal(patchedFinite.redeemable, false);
+    assert.equal(errorCode(await request('POST', `/rewards/${merchId}/redeem`, firstFan, { idempotencyKey: randomUUID() }), 409), 'REWARD_OUT_OF_STOCK');
+    assert.equal(read<{ stock: number | null; redeemable: boolean }>(
+      await request('PATCH', `/admin/rewards/${merchId}`, staff, { stock: null }), 200).redeemable, true);
+    const zeroCostConcept = read<{ id: string }>(await request('POST', '/admin/rewards', staff, {
+      kind: 'raffle',
+      title: 'Costless concept',
+      terms: 'Proposed',
+    }), 201);
+    assert.equal(errorCode(await request('PATCH', `/admin/rewards/${zeroCostConcept.id}`, staff, { kind: 'merch' }), 400), 'INVALID_REWARD');
+    const promotedConcept = read<{ kind: string; cost: number; redeemable: boolean }>(
+      await request('PATCH', `/admin/rewards/${zeroCostConcept.id}`, staff, { kind: 'merch', cost: 25 }),
+      200,
+    );
+    assert.equal(promotedConcept.kind, 'merch');
+    assert.equal(promotedConcept.cost, 25);
+    assert.equal(promotedConcept.redeemable, true);
+    assert.equal(read<{ active: boolean; redeemable: boolean }>(
+      await request('PATCH', `/admin/rewards/${zeroCostConcept.id}`, staff, { active: false }), 200).redeemable, false);
+    const balanceBeforeUnlimited = await balance(secondFan);
+    read(await request('POST', adjustUrl, staff, { delta: 50, reason: 'Unlimited merch test credit' }), 201);
+    const unlimitedClaim = read<{ status: string; cost: number }>(
+      await request('POST', `/rewards/${unlimitedReward.id}/redeem`, secondFan, { idempotencyKey: randomUUID() }),
+      201,
+    );
+    assert.equal(unlimitedClaim.status, 'requested');
+    assert.equal(unlimitedClaim.cost, 25);
+    const secondUnlimitedClaim = read<{ status: string; cost: number }>(
+      await request('POST', `/rewards/${unlimitedReward.id}/redeem`, secondFan, { idempotencyKey: randomUUID() }),
+      201,
+    );
+    assert.equal(secondUnlimitedClaim.status, 'requested');
+    assert.equal(await balance(secondFan), balanceBeforeUnlimited);
+    const publicAfterUnlimited = read<{ rewards: Array<{ id: string; kind: string; stock: number | null; redeemable: boolean }> }>(
+      await request('GET', '/rewards'), 200,
+    ).rewards;
+    assert.deepEqual(
+      publicAfterUnlimited.find(row => row.id === unlimitedReward.id),
+      {
+        id: unlimitedReward.id,
+        title: 'Unlimited FaZe Sticker',
+        description: 'Not stock-limited.',
+        kind: 'merch',
+        terms: 'Proposed demo benefit',
+        pointCost: 25,
+        cost: 25,
+        stock: null,
+        active: true,
+        isDemo: true,
+        redeemable: true,
+      },
+    );
+
+    // Settling and voiding open prediction markets before locksAt awards winners and keeps void result null.
+    const futureLock = new Date(Date.now() + 3_600_000).toISOString();
+    const earlyWinMarket = read<{ id: string }>(await request('POST', '/admin/prediction-markets', staff, {
+      type: 'match_winner',
+      title: 'Early Settle Open Match',
+      matchId: null,
+      tournamentId: null,
+      options: ['FaZe', 'Vitality'],
+      locksAt: futureLock,
+      award: 25,
+    }), 201);
+    const secondBalanceBeforeEarly = await balance(secondFan);
+    read(await request('POST', `/predictions/markets/${earlyWinMarket.id}/pick`, secondFan, { optionId: 'opt_1' }), 201);
+    read(await request('POST', `/admin/prediction-markets/${earlyWinMarket.id}/settle`, staff, {
+      optionId: 'opt_1',
+      sourceUrl: 'https://example.test/early-result',
+    }), 200);
+    assert.equal(await balance(secondFan), secondBalanceBeforeEarly + 25);
+    const earlyVoidMarket = read<{ id: string }>(await request('POST', '/admin/prediction-markets', staff, {
+      type: 'placement',
+      title: 'Early Void Open Placement',
+      matchId: null,
+      tournamentId: null,
+      options: ['1st', '2nd'],
+      locksAt: futureLock,
+      award: 50,
+    }), 201);
+    const voidedPayload = { optionId: null, sourceUrl: 'https://example.test/early-void' };
+    const voidedEarly = read<{ optionId: string | null; sourceUrl: string }>(
+      await request('POST', `/admin/prediction-markets/${earlyVoidMarket.id}/settle`, staff, voidedPayload), 200);
+    assert.equal(voidedEarly.optionId, null);
+    assert.deepEqual(
+      read(await request('POST', `/admin/prediction-markets/${earlyVoidMarket.id}/settle`, staff, voidedPayload), 200),
+      voidedEarly,
+    );
+    assert.equal(errorCode(
+      await request('POST', `/admin/prediction-markets/${earlyVoidMarket.id}/settle`, staff, { ...voidedPayload, optionId: 'opt_1' }),
+      409,
+    ), 'SETTLEMENT_CONFLICT');
+    assert.equal(errorCode(
+      await request('POST', `/predictions/markets/${earlyVoidMarket.id}/pick`, secondFan, { optionId: 'opt_1' }),
+      409,
+    ), 'MARKET_LOCKED');
+
+    const raceMarket = read<{ id: string }>(await request('POST', '/admin/prediction-markets', staff, {
+      type: 'match_winner',
+      title: 'Concurrent Early Settle Race',
+      matchId: null,
+      tournamentId: null,
+      options: ['FaZe', 'NAVI'],
+      locksAt: futureLock,
+      award: 25,
+    }), 201);
+    let racedPick: ReturnType<typeof request> | undefined;
+    await transaction(db, async client => {
+      await client.query('SELECT id FROM prediction_markets WHERE id=$1 FOR UPDATE', [raceMarket.id]);
+      racedPick = request('POST', `/predictions/markets/${raceMarket.id}/pick`, secondFan, { optionId: 'opt_1' });
+      const timeoutAt = Date.now() + 5000;
+      while (true) {
+        const { rowCount } = await db.query(`
+          SELECT 1 FROM pg_stat_activity WHERE pg_backend_pid() <> pid AND wait_event_type='Lock'
+            AND query='SELECT options FROM prediction_markets WHERE id=$1 FOR UPDATE'
+        `);
+        if (rowCount) break;
+        assert.ok(Date.now() < timeoutAt, 'Expected the pick to be waiting on the open market lock');
+        await delay(25);
+      }
+      await client.query(`
+        INSERT INTO prediction_settlements (market_id, option_id, source_url, reviewer_id)
+        VALUES ($1, 'opt_1', 'https://example.test/race-result', 'demo-staff')
+      `, [raceMarket.id]);
+    });
+    assert.equal(errorCode(await racedPick!, 409), 'MARKET_LOCKED');
+
+    const publicMarketsAfterEarly = read<{ markets: Array<{ id: string; state: string; result: unknown }> }>(
+      await request('GET', '/predictions/markets', secondFan), 200,
+    ).markets;
+    assert.equal(publicMarketsAfterEarly.find(row => row.id === earlyWinMarket.id)?.state, 'settled');
+    assert.equal(publicMarketsAfterEarly.find(row => row.id === earlyVoidMarket.id)?.state, 'void');
+    assert.equal(publicMarketsAfterEarly.find(row => row.id === earlyVoidMarket.id)?.result, null);
+    const adminMarketsAfterEarly = read<{ markets: Array<{ id: string; state: string; result: unknown }> }>(
+      await request('GET', '/admin/prediction-markets', staff), 200,
+    ).markets;
+    assert.equal(adminMarketsAfterEarly.find(row => row.id === earlyVoidMarket.id)?.state, 'void');
+    assert.equal(adminMarketsAfterEarly.find(row => row.id === earlyVoidMarket.id)?.result, null);
   }
 
   assert.equal((await request('GET', '/admin/insights', firstFan)).statusCode, 403);

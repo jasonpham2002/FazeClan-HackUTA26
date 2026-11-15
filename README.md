@@ -70,7 +70,7 @@ Points unlock eligibility for selected experiences; applying or taking the inter
 4. Hours 7–8: test the complete fan/staff loop, duplicate requests, eligibility and provider failures.
 5. Hours 8–10: freeze scope, run checks, deploy within the agreed target and rehearse.
 
-Use the existing shared app and real backend. Existing backend migrations are `001_auth.sql`, `002_applications.sql`, `003_interviews.sql`, `004_event_timezone.sql`, `006_engagement.sql`, and `007_engagement_compat.sql`; coordinate additive migrations and central route registration with Jason, and do not overwrite applied migrations or duplicate the app/database. Show honest unavailable states when sources/providers fail.
+Use the existing shared app and real backend. Existing backend migrations are `001_auth.sql`, `002_applications.sql`, `003_interviews.sql`, `004_event_timezone.sql`, `006_engagement.sql`, `007_engagement_compat.sql`, and `008_engagement_ui_compat.sql`; coordinate additive migrations and central route registration with Jason, and do not overwrite applied migrations or duplicate the app/database. Show honest unavailable states when sources/providers fail.
 
 ## Earlier standalone fan frontend (reference only)
 

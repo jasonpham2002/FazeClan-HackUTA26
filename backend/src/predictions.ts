@@ -71,7 +71,7 @@ const marketColumns = `m.id, m.kind,
   m.locks_at AS "locksAt", m.award_points AS "awardPoints", m.award_points AS award, m.is_demo AS "isDemo",
   ${marketStatusSql} AS status,
   ${marketStatusSql} AS state,
-  (SELECT row_to_json(r) FROM (SELECT ${resultColumns} FROM prediction_settlements WHERE market_id=m.id) r) AS result`
+  (SELECT row_to_json(r) FROM (SELECT ${resultColumns} FROM prediction_settlements WHERE market_id=m.id AND option_id IS NOT NULL) r) AS result`
 
 function normalizeCustomOptions(rawOptions: Array<string | { id?: string; label: string }>) {
   const cleaned = rawOptions
@@ -313,10 +313,9 @@ export function registerPredictionRoutes(app: FastifyInstance, db: Pool, auth: A
       }
       const { rows: [saved] } = await client.query(`
         INSERT INTO prediction_settlements (market_id,option_id,source_url,reviewer_id)
-        SELECT id,$2,$3,$4 FROM prediction_markets WHERE id=$1 AND locks_at <= clock_timestamp()
+        VALUES ($1,$2,$3,$4)
         RETURNING ${resultColumns}, reviewer_id AS "reviewerId"
       `, [id, optionId, sourceUrl, staff.id])
-      if (!saved) fail(409, 'MARKET_OPEN', 'Wait for the market to lock before settling.')
       if (optionId !== null) {
         await client.query(`
           INSERT INTO point_transactions (user_id,delta,reason,source_type,source_id,reviewer_id)

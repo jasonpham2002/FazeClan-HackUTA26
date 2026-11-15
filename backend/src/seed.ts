@@ -80,18 +80,34 @@ export async function seed(db: Pool): Promise<void> {
           WHERE table_schema = current_schema() AND table_name = 'rewards' AND column_name = 'description'
         ) AS has_desc
       `);
+      const { rows: [merchConstraint] } = await client.query<{ uses_merch: boolean }>(`
+        WITH target_constraints AS MATERIALIZED (
+          SELECT con.oid
+          FROM pg_constraint con
+          JOIN pg_class rel ON rel.oid = con.conrelid
+          JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+          WHERE nsp.nspname = current_schema()
+            AND rel.relname = 'rewards'
+            AND con.contype = 'c'
+        )
+        SELECT EXISTS (
+          SELECT 1 FROM target_constraints
+          WHERE pg_get_constraintdef(oid) LIKE '%''merch''%'
+        ) AS uses_merch
+      `);
+      const merchKind = merchConstraint.uses_merch ? 'merch' : 'merchandise';
       if (descCol.has_desc) {
         await client.query(`
           INSERT INTO rewards (id, title, description, kind, terms, point_cost, stock, active, is_demo)
-          VALUES ($1, 'Sample FaZe merch', 'Proposed merchandise benefit for the demo.', 'merchandise', 'Proposed demo benefit', 50, 10, true, true)
+          VALUES ($1, 'Sample FaZe merch', 'Proposed merchandise benefit for the demo.', $2, 'Proposed demo benefit', 50, 10, true, true)
           ON CONFLICT (id) DO NOTHING
-        `, [demoRewardId]);
+        `, [demoRewardId, merchKind]);
       } else {
         await client.query(`
           INSERT INTO rewards (id, title, kind, terms, point_cost, stock, active, is_demo)
-          VALUES ($1, 'Sample FaZe merch', 'merchandise', 'Proposed demo benefit', 50, 10, true, true)
+          VALUES ($1, 'Sample FaZe merch', $2, 'Proposed demo benefit', 50, 10, true, true)
           ON CONFLICT (id) DO NOTHING
-        `, [demoRewardId]);
+        `, [demoRewardId, merchKind]);
       }
     }
   });
