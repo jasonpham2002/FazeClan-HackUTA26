@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { test } from 'node:test';
+import { createPool } from '../src/db.ts';
+import { migrate, dropTestSchema } from '../src/migrate.ts';
+import { esportsBundleSchema, snapshotRecords, importEsports, registerPlayerRoutes } from '../src/esports-data.ts';
+import Fastify from 'fastify';
+
+const data = JSON.parse(await readFile(new URL('../data/faze-cs2-2026-11-15.json',import.meta.url),'utf8'));
+test('source bundle contains real-attributed snapshots and rejects fabricated or broken provenance', () => {
+  const parsed = esportsBundleSchema.parse(data);
+  assert.equal(parsed.players.filter(player => player.rosterStatus === 'active').length,5);
+  assert.equal(parsed.snapshots.length,5);
+  assert.ok(parsed.snapshots.every(snapshot => snapshot.metrics.kd === null && snapshot.metrics.headshotPercent === null));
+  const bad = structuredClone(data); bad.snapshots[0].sourceId = 'missing';
+  assert.throws(() => esportsBundleSchema.parse(bad));
+  const synthetic = structuredClone(data); synthetic.isDemo = true;
+  assert.throws(() => esportsBundleSchema.parse(synthetic));
+  const invalid = structuredClone(data); invalid.snapshots[0].metrics.headshotPercent = 101;
+  assert.throws(() => esportsBundleSchema.parse(invalid));
+  assert.deepEqual(snapshotRecords(data),snapshotRecords(JSON.parse(JSON.stringify(data))));
+});
+
+test('real data import is repeatable, preserves snapshots, and exposes source-linked player APIs', async context => {
+  const schema = `faze_test_${randomUUID().replaceAll('-','')}`;
+  const db = createPool(process.env.DATABASE_URL ?? '',schema);
+  const app = Fastify();
+  context.after(async () => { await app.close(); try { await dropTestSchema(db,schema); } finally { await db.end(); } });
+  await migrate(db,schema);
+  await importEsports(db,data); await importEsports(db,data);
+  assert.equal((await db.query('SELECT count(*)::int AS count FROM esports_stat_snapshots')).rows[0].count,5);
+  const invalid = structuredClone(data); invalid.snapshots[0].metrics.adr = -1;
+  await assert.rejects(importEsports(db,invalid));
+  assert.equal((await db.query('SELECT count(*)::int AS count FROM esports_stat_snapshots')).rows[0].count,5);
+  registerPlayerRoutes(app,db);
+  const roster = (await app.inject('/players')).json();
+  assert.equal(roster.players.length,7);
+  const response = await app.inject('/players/hltv-9960/stats');
+  assert.equal(response.statusCode,200);
+  const stats = response.json();
+  assert.equal(stats.metrics.adr,80.1);
+  assert.match(stats.source.url,/hltv\.org/);
+  assert.equal(stats.isDemo,false);
+  assert.equal((await app.inject(`/players/hltv-10394/stats?snapshotId=${stats.snapshotId}`)).statusCode,404);
+  assert.equal((await app.inject('/players/hltv-enkay-j/stats')).statusCode,404);
+  const updated = structuredClone(data);
+  updated.collectedAt = '2030-01-01T00:00:00Z';
+  updated.sources.forEach((source: {observedAt:string}) => source.observedAt = updated.collectedAt);
+  updated.snapshots.forEach((snapshot: {observedAt:string}) => snapshot.observedAt = updated.collectedAt);
+  updated.players[0].rosterStatus = 'benched';
+  await importEsports(db,updated); await importEsports(db,data);
+  assert.equal((await app.inject('/players/hltv-9960')).json().rosterStatus,'benched');
+  assert.equal((await db.query('SELECT count(*)::int AS count FROM esports_stat_snapshots')).rows[0].count,10);
+});

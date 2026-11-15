@@ -10,6 +10,7 @@ import { ApiError, fail } from './errors.ts'
 import { registerInterviewRoutes } from './interviews.ts'
 import { registerFanRoutes } from './fan.ts'
 import { registerStaffRoutes } from './staff.ts'
+import { registerPlayerRoutes } from './esports-data.ts'
 
 export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
   const app = Fastify({
@@ -58,6 +59,7 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
     return { status: 'ok' }
   })
   const auth = registerAuth(app, db, config, sendMail)
+  registerPlayerRoutes(app, db)
   registerFanRoutes(app, db, auth)
   registerStaffRoutes(app, db, auth)
   registerInterviewRoutes(app, db, config.agentToken)

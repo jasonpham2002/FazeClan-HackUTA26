@@ -85,3 +85,7 @@ The local worker runs sample interviews. Coordinate the Muse agent handoff with 
 - Database objects are in the `faze` schema, not necessarily `public`. Query `SELECT id,email,role FROM faze."user"` in your database console after verifying sign-in. Confirm the console and API use the same service/database/schema.
 - Migration checksums now normalize LF/CRLF line endings and accept historical checksums from either platform. The migration runner updates only recognized line-ending variants to the canonical hash; actual SQL changes still fail. Do not edit applied migration SQL to bypass an error.
 - Backend tests default to disposable `faze_test_*` schemas. They are not expected to add accounts to the shared `faze` schema. Do not set `TEST_SCHEMA=faze` for a routine test run.
+
+## Sourced CS2 player data
+
+The first real, source-attributed roster/stat bundle and dry-run/import instructions are in [data/README.md](data/README.md). Migration 010 adds the player/snapshot tables. Public read endpoints are `/players`, `/players/:id`, and `/players/:id/stats`. Source snapshots may be cached and are not a live feed; keep their period/freshness metadata visible.

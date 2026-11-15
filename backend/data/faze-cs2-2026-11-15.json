@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "game": "CS2",
+  "team": "FaZe",
+  "isDemo": false,
+  "collectedAt": "2026-11-15T09:24:20Z",
+  "limitations": [
+    "These are real published source snapshots, not a live match feed. Some source pages were returned from a web-tool cache; source update times are unverified.",
+    "All-time CS2 aggregates include matches for prior teams; they are not current-FaZe-stint or last-tournament statistics.",
+    "Players have different sample sizes and potentially different source refresh times. Do not claim a shared source-as-of date or infer time trends from these single aggregates.",
+    "K/D and headshot percentage were not verified in the captured overview snapshots and remain null. Do not estimate K/D from rounded per-round values.",
+    "No match start times, outcomes, tournament placements or AI-generated analytical claims are included in this first bundle."
+  ],
+  "sources": [
+    {
+      "id": "roster_hltv",
+      "url": "https://www.hltv.org/team/6667/faze",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "sourceUpdatedAt": null,
+      "crawlHint": "Web tool reported crawled today; provider update time not supplied."
+    },
+    {
+      "id": "hltv_frozen",
+      "url": "https://www.hltv.org/stats/players/9960/frozen?csVersion=CS2",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "sourceUpdatedAt": null,
+      "crawlHint": "Web tool reported crawled today; provider update time not supplied."
+    },
+    {
+      "id": "hltv_twistzz",
+      "url": "https://www.hltv.org/stats/players/10394/twistzz?csVersion=CS2",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "sourceUpdatedAt": null,
+      "crawlHint": "Web tool reported crawled today; provider update time not supplied."
+    },
+    {
+      "id": "hltv_neityu",
+      "url": "https://www.hltv.org/stats/players/21972/neityu?csVersion=CS2",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "sourceUpdatedAt": null,
+      "crawlHint": "Web tool reported crawled 2 weeks ago; provider update time not supplied."
+    },
+    {
+      "id": "hltv_jcobbb",
+      "url": "https://www.hltv.org/stats/players/22383/jcobbb?csVersion=CS2",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "sourceUpdatedAt": null,
+      "crawlHint": "Web tool reported crawled 3 weeks ago; provider update time not supplied."
+    },
+    {
+      "id": "hltv_jboen",
+      "url": "https://www.hltv.org/stats/players/22866/jboen?csVersion=CS2",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "sourceUpdatedAt": null,
+      "crawlHint": "Web tool reported crawled last month; provider update time not supplied."
+    }
+  ],
+  "players": [
+    {
+      "id": "hltv-9960",
+      "handle": "frozen",
+      "displayName": "David ?er?ansk?",
+      "rosterStatus": "active",
+      "rosterSourceId": "roster_hltv",
+      "profileUrl": "https://www.hltv.org/player/9960/frozen",
+      "role": null
+    },
+    {
+      "id": "hltv-10394",
+      "handle": "Twistzz",
+      "displayName": "Russel Van Dulken",
+      "rosterStatus": "active",
+      "rosterSourceId": "roster_hltv",
+      "profileUrl": "https://www.hltv.org/player/10394/twistzz",
+      "role": null
+    },
+    {
+      "id": "hltv-21972",
+      "handle": "Neityu",
+      "displayName": "Ryan Aubry",
+      "rosterStatus": "active",
+      "rosterSourceId": "roster_hltv",
+      "profileUrl": "https://www.hltv.org/player/21972/neityu",
+      "role": null
+    },
+    {
+      "id": "hltv-22383",
+      "handle": "jcobbb",
+      "displayName": "Jakub Pietruszewski",
+      "rosterStatus": "active",
+      "rosterSourceId": "roster_hltv",
+      "profileUrl": "https://www.hltv.org/player/22383/jcobbb",
+      "role": null
+    },
+    {
+      "id": "hltv-22866",
+      "handle": "JBOEN",
+      "displayName": "Jason Boe Nielsen",
+      "rosterStatus": "active",
+      "rosterSourceId": "roster_hltv",
+      "profileUrl": "https://www.hltv.org/player/22866/jboen",
+      "role": null
+    },
+    {
+      "id": "hltv-18053",
+      "handle": "broky",
+      "displayName": "Helvijs Saukants",
+      "rosterStatus": "benched",
+      "rosterSourceId": "roster_hltv",
+      "profileUrl": "https://www.hltv.org/player/18053/broky",
+      "role": null
+    },
+    {
+      "id": "hltv-enkay-j",
+      "handle": "enkay J",
+      "displayName": "Niclas Krumhorn",
+      "rosterStatus": "coach",
+      "rosterSourceId": "roster_hltv",
+      "profileUrl": null,
+      "role": "coach"
+    }
+  ],
+  "snapshots": [
+    {
+      "playerId": "hltv-9960",
+      "sourceId": "hltv_frozen",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "period": {
+        "key": "all_time_cs2",
+        "label": "All available CS2 maps (all teams)",
+        "startsAt": null,
+        "endsAt": null
+      },
+      "mapsPlayed": 593,
+      "metrics": {
+        "rating": 1.16,
+        "ratingDefinition": "HLTV Rating 3.0",
+        "kd": null,
+        "adr": 80.1,
+        "headshotPercent": null,
+        "kastPercent": 74.8,
+        "killsPerRound": 0.71,
+        "deathsPerRound": 0.63
+      }
+    },
+    {
+      "playerId": "hltv-10394",
+      "sourceId": "hltv_twistzz",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "period": {
+        "key": "all_time_cs2",
+        "label": "All available CS2 maps (all teams)",
+        "startsAt": null,
+        "endsAt": null
+      },
+      "mapsPlayed": 584,
+      "metrics": {
+        "rating": 1.16,
+        "ratingDefinition": "HLTV Rating 3.0",
+        "kd": null,
+        "adr": 78.4,
+        "headshotPercent": null,
+        "kastPercent": 74.8,
+        "killsPerRound": 0.72,
+        "deathsPerRound": 0.64
+      }
+    },
+    {
+      "playerId": "hltv-21972",
+      "sourceId": "hltv_neityu",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "period": {
+        "key": "all_time_cs2",
+        "label": "All available CS2 maps (all teams)",
+        "startsAt": null,
+        "endsAt": null
+      },
+      "mapsPlayed": 804,
+      "metrics": {
+        "rating": 1.07,
+        "ratingDefinition": "HLTV Rating 3.0",
+        "kd": null,
+        "adr": 74.6,
+        "headshotPercent": null,
+        "kastPercent": 73.5,
+        "killsPerRound": 0.67,
+        "deathsPerRound": 0.65
+      }
+    },
+    {
+      "playerId": "hltv-22383",
+      "sourceId": "hltv_jcobbb",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "period": {
+        "key": "all_time_cs2",
+        "label": "All available CS2 maps (all teams)",
+        "startsAt": null,
+        "endsAt": null
+      },
+      "mapsPlayed": 426,
+      "metrics": {
+        "rating": 1.08,
+        "ratingDefinition": "HLTV Rating 3.0",
+        "kd": null,
+        "adr": 76.1,
+        "headshotPercent": null,
+        "kastPercent": 72.3,
+        "killsPerRound": 0.69,
+        "deathsPerRound": 0.69
+      }
+    },
+    {
+      "playerId": "hltv-22866",
+      "sourceId": "hltv_jboen",
+      "observedAt": "2026-11-15T09:24:20Z",
+      "period": {
+        "key": "all_time_cs2",
+        "label": "All available CS2 maps (all teams)",
+        "startsAt": null,
+        "endsAt": null
+      },
+      "mapsPlayed": 379,
+      "metrics": {
+        "rating": 1.11,
+        "ratingDefinition": "HLTV Rating 3.0",
+        "kd": null,
+        "adr": 72.9,
+        "headshotPercent": null,
+        "kastPercent": 70.9,
+        "killsPerRound": 0.72,
+        "deathsPerRound": 0.62
+      }
+    }
+  ]
+}
