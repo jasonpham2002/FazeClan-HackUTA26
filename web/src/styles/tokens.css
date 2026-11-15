@@ -100,7 +100,8 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  /* Transparent so the page backdrop on <html> shows through. */
+  background: transparent;
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
@@ -115,6 +116,26 @@ main { min-width: 0; overflow-wrap: anywhere; }
 main input, main textarea, main select { min-width: 0; max-width: 100%; }
 nav a[aria-current='page'] { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 6px; }
 @media (max-width: 640px) { main input, main textarea, main select { font-size: 16px; } }
+
+/*
+ * Page backdrop: the toolkit's black-and-white tiger camo, dimmed almost to
+ * black, with a Red Alert glow from the top-right corner. It sits behind all
+ * content and stays put while the page scrolls; panels remain opaque so text
+ * contrast is unaffected.
+ */
+html {
+  min-height: 100%;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(64rem 38rem at 100% 0%, rgb(228 0 43 / 0.22), transparent 70%),
+    radial-gradient(48rem 30rem at 0% 100%, rgb(228 0 43 / 0.1), transparent 70%),
+    linear-gradient(rgb(17 17 17 / 0.9), rgb(17 17 17 / 0.95)),
+    url('../assets/brand/tiger-camo-bw.jpg');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
 
 ::selection {
   background: rgb(228 0 43 / 0.5);

@@ -35,7 +35,8 @@ export function AdminLayout() {
 
   return (
     <>
-      <header className="border-b border-border bg-surface">
+      {/* Black behind the logo (its red stroke must not sit on red), deepening to red, over a Red Alert rule. */}
+      <header className="border-b-2 border-accent bg-[linear-gradient(100deg,#0a0a0a_0%,#141414_40%,#3d000c_75%,#7a0018_100%)]">
         <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 sm:px-6">
           <NavLink to="/admin" end className="flex items-center gap-5">
             {/* Toolkit logo for dark backgrounds, unmodified; brand minimum width is 40px. */}
