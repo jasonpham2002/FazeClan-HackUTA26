@@ -16,8 +16,8 @@ const PORTRAITS: Record<string, { url: string; credit: string }> = {
     handle,
     { url: `/portraits/player_${handle}.png`, credit: 'HLTV.org' },
   ])),
-  'enkay j': { url: '/portraits/player_enkay-j.png', credit: 'Stephanie Lindgren / BLAST' },
-  broky: { url: '/portraits/player_broky.png', credit: 'BLAST Premier / Wikimedia Commons (CC BY 3.0)' },
+  'enkay j': { url: '/portraits/player_enkay-j.png', credit: 'FaZe Clan' },
+  broky: { url: '/portraits/player_broky.png', credit: 'FaZe Clan' },
 }
 
 export function portraitFor(handle: string): { url: string; credit: string } | null {
