@@ -118,7 +118,11 @@ function LiveSignIn() {
           className={inputClass} type="email" required pattern=".+@example[.]test" maxLength={254} />
       </Field>
       {mutation.isError && <ErrorState error={mutation.error} />}
-      {mutation.isSuccess && <Notice>Check Mailpit for your sign-in link.</Notice>}
+      {mutation.isSuccess && <Notice>
+        <a className="font-semibold underline" href="http://127.0.0.1:8025" target="_blank" rel="noopener noreferrer">
+          Open Mailpit
+        </a>{' '}and click the sign-in link in your latest message.
+      </Notice>}
       <Button type="submit" variant="primary" disabled={mutation.isPending}>Send sign-in link</Button>
     </form>
   </Card></div>
