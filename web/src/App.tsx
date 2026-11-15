@@ -14,6 +14,7 @@ import { FanSignUpPage, SignInPage } from './components/ui/SignInPage'
 import { EmptyState } from './components/ui/ui'
 import { MatchesPage } from './fan/MatchesPage'
 import { PlayerPage } from './fan/PlayerPage'
+import { PlayersExperience } from './fan/experience/PlayersExperience'
 import { PlayersPage } from './fan/PlayersPage'
 import { RewardsPage } from './fan/RewardsPage'
 import { FanLayout, FanEventsPage, FanEventPage, FanApplicationPage, FanProfilePage, FanProfileEditPage } from './fan/FanPages'
@@ -27,6 +28,8 @@ export default function App() {
         <Route element={<FanLayout />}>
           <Route path="/" element={<FanEventsPage />} />
           <Route path="/players" element={<PlayersPage />} />
+          {/* FaZe ID: the immersive scroll scene, reached from the logo. */}
+          <Route path="/faze-id" element={<PlayersExperience />} />
           <Route path="/players/:id" element={<PlayerPage />} />
           <Route path="/matches" element={<MatchesPage />} />
           <Route path="/rewards" element={<RewardsPage />} />

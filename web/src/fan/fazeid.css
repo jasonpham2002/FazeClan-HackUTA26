@@ -94,7 +94,9 @@
 
 .fz-mobile-panel { display: none; }
 
-@media (max-width: 63.99rem) {
+.fz-nav a { white-space: nowrap; }
+
+@media (max-width: 71.99rem) {
   .fz-topbar .fz-nav { display: none; }
   .fz-menu-button { display: inline-flex; }
   .fz-actions .fz-theme { display: none; }

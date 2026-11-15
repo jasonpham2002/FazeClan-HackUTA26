@@ -30,10 +30,18 @@ async function code(run: Promise<unknown>): Promise<string> {
 const SOURCE = 'https://example.test/result'
 
 describe('players (placeholder data)', () => {
-  it('keeps a missing metric as null and labels everything as sample data', async () => {
+  it('lists the five named starters with nothing invented about them', async () => {
     const { api } = setup()
     const players = await api.listPlayers()
-    expect(players.every((player) => player.isDemo)).toBe(true)
+    expect(players.map((player) => player.handle)).toEqual(['frozen', 'Twistzz', 'Neityu', 'jcobbb', 'JBOEN'])
+    expect(players.every((player) => player.role === null && player.sourceUrl === null)).toBe(true)
+    // Demo numbers and highlights exist for the pitch, but are always flagged as demo data.
+    expect((await api.getPlayerStats('player_twistzz')).isDemo).toBe(true)
+    expect((await api.getPlayerHighlights('player_twistzz')).isDemo).toBe(true)
+  })
+
+  it('keeps a missing metric as null on the placeholder demo profiles', async () => {
+    const { api } = setup()
     const stats = await api.getPlayerStats('player_sample_2')
     expect(stats.metrics.headshotPercent.value).toBeNull()
     expect(stats.metrics.rating.value).toBeGreaterThan(0)

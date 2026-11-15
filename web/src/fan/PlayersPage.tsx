@@ -6,7 +6,7 @@ import type { Player } from '../api/types'
 import { Icon } from '../components/ui/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
-import { PlayerPortrait, RosterBadge, SampleBadge, useFan } from './fazeid-ui'
+import { isUnverified, PlayerPortrait, PREVIEW_LABEL, RosterBadge, SampleBadge, useFan } from './fazeid-ui'
 import { useReveal } from './useReveal'
 
 function PlayerCard({ player, index, following }: { player: Player; index: number; following: boolean }) {
@@ -59,7 +59,9 @@ function Group({ title, players, follows, offset }: { title: string; players: Pl
   )
 }
 
-export function PlayersPage() {
+/** embedded when shown under the FaZe ID scene, which already has the page's main heading. */
+export function PlayersPage({ embedded = false }: { embedded?: boolean }) {
+  const Heading = embedded ? 'h2' : 'h1'
   const { fan } = useFan()
   const players = useQuery({ queryKey: ['players'], queryFn: api.listPlayers })
   const follows = useQuery({ queryKey: ['fan', 'follows'], queryFn: api.listFollows, enabled: Boolean(fan) })
@@ -77,9 +79,9 @@ export function PlayersPage() {
       <header className="relative grid gap-8 pt-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-end">
         <div aria-hidden="true" className="pointer-events-none absolute -top-24 -left-24 -z-10 size-[28rem] rounded-full bg-[radial-gradient(closest-side,rgb(228_0_43/0.22),transparent)]" />
         <div className="space-y-5">
-          <h1 className="fz-display fz-rise text-[clamp(3.5rem,11vw,8.5rem)]" style={{ '--i': 1 } as CSSProperties}>
+          <Heading className="fz-display fz-rise text-[clamp(3.5rem,11vw,8.5rem)]" style={{ '--i': 1 } as CSSProperties}>
             The FaZe<br /><span className="text-accent-text">CS2 roster</span>
-          </h1>
+          </Heading>
         </div>
         <div className="fz-rise space-y-4 lg:pb-3" style={{ '--i': 2 } as CSSProperties}>
           <p className="max-w-[46ch] text-lg leading-relaxed text-muted">
@@ -88,6 +90,12 @@ export function PlayersPage() {
           <p className="fz-meta">
             Roster checked {formatDateTime(checkedAt)}. Refreshed by hand, not a live feed.
           </p>
+          {list.some(isUnverified) && (
+            <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+              <SampleBadge label={PREVIEW_LABEL} />
+              Names only for now. Roles, photos, statistics and highlights appear once they are verified.
+            </p>
+          )}
           {sample && (
             <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
               <SampleBadge label="Placeholder players" />

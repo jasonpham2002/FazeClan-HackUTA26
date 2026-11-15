@@ -1,5 +1,6 @@
 /* Small pieces shared by the FaZe ID fan pages. */
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import camo from '../assets/brand/tiger-camo-bw.jpg'
 import { api, ApiError } from '../api'
 import type { MarketState, Player, PredictionMarket, RosterStatus, StatKey } from '../api/types'
@@ -14,6 +15,11 @@ export function useFan() {
   const signedOut = me.isError && me.error instanceof ApiError && me.error.status === 401
   return { fan: me.data?.role === 'fan' ? me.data : null, signedOut, isPending: me.isPending }
 }
+
+/** A player whose roster entry has no source yet: shown as a preview, not as verified data. */
+export const isUnverified = (player: Player) => !player.isDemo && !player.sourceUrl
+
+export const PREVIEW_LABEL = 'Demo preview — data pending verification'
 
 export function SampleBadge({ label = 'Sample data' }: { label?: string }) {
   return (
@@ -37,10 +43,13 @@ export function RosterBadge({ status }: { status: RosterStatus }) {
 
 /** A player photo, or a deliberate placeholder when no approved image was supplied. */
 export function PlayerPortrait({ player, className = '' }: { player: Player; className?: string }) {
-  if (player.imageUrl) {
-    return <img src={player.imageUrl} alt={`${player.handle}`} loading="lazy" className={`bg-surface-2 object-cover ${className}`} />
+  const [failed, setFailed] = useState(false)
+  if (player.imageUrl && !failed) {
+    return <img src={player.imageUrl} alt={player.handle} loading="lazy" onError={() => setFailed(true)} className={`bg-surface-2 object-cover object-top ${className}`} />
   }
-  const mark = player.handle.replace(/[^A-Za-z0-9]/g, '').slice(-2).toUpperCase() || '?'
+  // Placeholder players carry a number; a real player gets the first letter of their tag, never invented artwork.
+  const clean = player.handle.replace(/[^A-Za-z0-9]/g, '')
+  const mark = (player.isDemo ? clean.slice(-2) : clean.slice(0, 1)).toUpperCase() || '?'
   return (
     <div role="img" aria-label={`No photo supplied for ${player.handle}`} className={`relative isolate grid place-items-center overflow-hidden bg-[#161616] [container-type:inline-size] ${className}`}>
       <img src={camo} alt="" className="absolute inset-0 -z-10 size-full object-cover opacity-25 mix-blend-luminosity" />

@@ -1,0 +1,425 @@
+/*
+ * FaZe ID arena: a pinned, scroll-driven 2.5D scene.
+ * One variable, --p (0 to 1, set from scroll), drives every layer.
+ * Phases: a = camera push through the title, b = floor and light rise,
+ * c = lineup arrives. Each is derived with clamp() so CSS does the timeline.
+ */
+
+.xp {
+  --p: 0;
+  --a: clamp(0, calc(var(--p) / 0.32), 1);
+  --b: clamp(0, calc((var(--p) - 0.2) / 0.3), 1);
+  --c: clamp(0, calc((var(--p) - 0.38) / 0.4), 1);
+  position: relative;
+  height: 420vh;
+  /* Break out of the page container to the full viewport width. */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: calc(-1 * clamp(1.5rem, 4vw, 3rem));
+}
+
+.xp-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #070707;
+  color: #f5f5f5;
+  perspective: 1100px;
+  perspective-origin: 50% 42%;
+}
+
+/* ---------- Environment layers ---------- */
+
+.xp-camo {
+  position: absolute;
+  inset: -12%;
+  background: url('../../assets/brand/tiger-camo-bw.jpg') center / cover no-repeat;
+  filter: grayscale(1) contrast(1.15) brightness(0.24);
+  transform: scale(calc(1.25 - var(--a) * 0.2)) translateY(calc(var(--p) * -6%));
+  opacity: calc(0.5 - var(--b) * 0.32);
+  will-change: transform;
+}
+
+.xp-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 45%, transparent 35%, rgb(0 0 0 / 0.85) 100%),
+    linear-gradient(180deg, rgb(7 7 7 / 0.2) 0%, transparent 30%, rgb(7 7 7 / 0.9) 100%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.xp-light {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.xp-light-1 {
+  width: 70vmax; height: 70vmax;
+  left: calc(50% - 35vmax);
+  top: calc(20% - 35vmax + var(--b) * 30vh);
+  background: radial-gradient(closest-side, rgb(228 0 43 / 0.55), transparent);
+  opacity: calc(0.5 + var(--b) * 0.5);
+}
+
+.xp-light-2 {
+  width: 40vmax; height: 40vmax;
+  left: -10vmax; top: 40%;
+  background: radial-gradient(closest-side, rgb(228 0 43 / 0.35), transparent);
+  transform: translateX(calc(var(--a) * 20vw));
+}
+
+.xp-beams {
+  position: absolute;
+  inset: -20% -10% 10%;
+  background: conic-gradient(from 180deg at 50% 0%, transparent 0deg 160deg, rgb(255 60 90 / 0.14) 170deg, transparent 176deg 184deg, rgb(255 60 90 / 0.12) 190deg, transparent 200deg 360deg);
+  opacity: calc(var(--b) * 0.9);
+  transform: scaleY(calc(0.6 + var(--b) * 0.4));
+  transform-origin: 50% 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Arena floor: a perspective grid that tilts up as the camera settles. */
+.xp-floor {
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  top: 70%;
+  height: 80%;
+  background:
+    linear-gradient(rgb(228 0 43 / 0.75) 2px, transparent 2px) 0 0 / 100% 72px,
+    linear-gradient(90deg, rgb(255 255 255 / 0.14) 1px, transparent 1px) 0 0 / 72px 100%;
+  transform-origin: 50% 0;
+  transform: translateY(calc((1 - var(--b)) * 30vh)) rotateX(76deg);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 75%);
+  opacity: calc(var(--b) * 0.9);
+}
+
+.xp-horizon {
+  position: absolute;
+  left: 0; right: 0;
+  top: 70%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent) 30%, #ff5470 50%, var(--color-accent) 70%, transparent);
+  box-shadow: 0 0 30px 6px rgb(228 0 43 / 0.55);
+  transform: scaleX(var(--b));
+  opacity: var(--b);
+}
+
+/* ---------- Typography layers ---------- */
+
+.xp-ghost {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  font-family: var(--font-display);
+  font-size: 46vw;
+  line-height: 0.8;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(255 255 255 / 0.08);
+  transform: translate(-50%, -50%) translateZ(-400px) scale(calc(1.3 + var(--p) * 0.4));
+  pointer-events: none;
+  user-select: none;
+}
+
+.xp-title {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.xp-title-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  text-align: center;
+  transform: translateZ(calc(var(--a) * 700px));
+  opacity: calc(1 - var(--a) * 1.15);
+  filter: blur(calc(var(--a) * 10px));
+}
+
+.xp-word {
+  display: flex;
+  gap: 0.06em;
+  font-family: var(--font-display);
+  font-size: clamp(5.5rem, 21vw, 22rem);
+  line-height: 0.82;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.xp-word .xp-faze { transform: translateX(calc(var(--a) * -28vw)); }
+.xp-word .xp-id {
+  color: var(--color-accent);
+  text-shadow: 0 0 60px rgb(228 0 43 / 0.6);
+  transform: translateX(calc(var(--a) * 28vw));
+}
+
+.xp-tagline {
+  max-width: 34ch;
+  font-size: clamp(1rem, 1.6vw, 1.35rem);
+  line-height: 1.45;
+  color: rgb(245 245 245 / 0.78);
+}
+
+.xp-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 2.5rem;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  transform: translateX(-50%);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(245 245 245 / 0.65);
+  opacity: calc(1 - var(--a) * 3);
+}
+
+.xp-cue span {
+  width: 1px;
+  height: 2.5rem;
+  background: linear-gradient(180deg, var(--color-accent), transparent);
+  animation: xp-cue 1.8s ease-in-out infinite;
+  transform-origin: top;
+}
+
+/* ---------- Lineup ---------- */
+
+.xp-lineup-head {
+  position: absolute;
+  left: 0; right: 0;
+  top: clamp(5.5rem, 13vh, 8rem);
+  z-index: 7;
+  padding-inline: 1.25rem;
+  text-align: center;
+  opacity: clamp(0, calc((var(--c) - 0.35) * 3), 1);
+  transform: translateY(calc((1 - var(--c)) * 30px));
+}
+
+.xp-lineup-head h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.xp-lineup-head .xp-preview {
+  display: inline-block;
+  margin-top: 0.85rem;
+  border: 1px solid rgb(242 193 78 / 0.45);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.55);
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-warn);
+}
+
+.xp-lineup-head p:not(.xp-preview) {max-width: 40ch; margin: 0.6rem auto 0; color: rgb(245 245 245 / 0.7); }
+
+.xp-spotlight {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: clamp(6rem, 24vw, 22rem);
+  line-height: 0.8;
+  white-space: nowrap;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.06);
+  -webkit-text-stroke: 2px rgb(255 84 112 / 0.55);
+  text-shadow: 0 0 80px rgb(228 0 43 / 0.5);
+  transform: translate(-50%, -50%);
+  opacity: var(--c);
+  transition: opacity 300ms ease-out;
+  pointer-events: none;
+  user-select: none;
+}
+
+.xp-lineup {
+  position: absolute;
+  left: 50%;
+  bottom: 9vh;
+  z-index: 6;
+  width: 0;
+  height: min(52vh, 30rem);
+  bottom: 15vh;
+  transform-style: preserve-3d;
+}
+
+.xp-player {
+  --k: 0;      /* position from the centre: -2..2 */
+  --d: 0;      /* stagger delay in progress units */
+  --rise: clamp(0, calc((var(--c) - var(--d)) / 0.45), 1);
+  --spread: clamp(9rem, 17vw, 16rem);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: clamp(8.5rem, 15vw, 14rem);
+  margin-left: calc(clamp(8.5rem, 15vw, 14rem) / -2);
+  transform-style: preserve-3d;
+  transform:
+    translateX(calc(var(--k) * var(--spread)))
+    translateY(calc((1 - var(--rise)) * 75vh))
+    translateZ(calc(var(--abs, 0) * -140px + var(--lift, 0) * 120px))
+    rotateY(calc(var(--k) * -14deg));
+  opacity: var(--rise);
+  transition: --lift 400ms ease-out;
+  outline: none;
+}
+
+.xp-figure {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 5;
+  width: 100%;
+  transition: filter 400ms ease-out, transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  filter: brightness(calc(0.6 + var(--lift, 0) * 0.5)) drop-shadow(0 0 calc(var(--lift, 0) * 22px) rgb(228 0 43 / 0.7));
+}
+
+.xp-figure img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+.xp-figure.has-photo { border-radius: 1rem 1rem 0 0; overflow: hidden; }
+
+.xp-figure.has-photo::after {
+  /* Red rim light from behind. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgb(228 0 43 / 0.5), transparent 70%),
+    linear-gradient(180deg, transparent 60%, rgb(0 0 0 / 0.85));
+  pointer-events: none;
+}
+
+.xp-tag {
+  position: absolute;
+  left: -1rem; right: -1rem; top: calc(100% + 1.1rem);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.xp-tag strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.1rem, 1.8vw, 1.6rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.xp-tag span { font-size: 0.75rem; color: rgb(245 245 245 / 0.7); }
+
+.xp-reflection {
+  position: absolute;
+  left: 4%; right: 4%;
+  bottom: -10px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(228 0 43 / calc(0.25 + var(--lift, 0) * 0.5)), transparent);
+}
+
+.xp-player:hover,
+.xp-player:focus-visible,
+.xp-player[data-active='true'] { --lift: 1; z-index: 3; }
+
+.xp-player:focus-visible .xp-tag strong { outline: 2px solid #fff; outline-offset: 4px; border-radius: 2px; }
+
+.xp-sample {
+  position: absolute;
+  top: -1.6rem; left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  border-radius: 0.375rem;
+  background: rgb(0 0 0 / 0.7);
+  padding: 0.15rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-warn);
+}
+
+.xp-end {
+  position: absolute;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 7;
+  transform: translateX(-50%);
+  opacity: clamp(0, calc((var(--p) - 0.85) * 8), 1);
+  font-size: 0.875rem;
+  color: rgb(245 245 245 / 0.7);
+  white-space: nowrap;
+}
+
+@property --lift { syntax: '<number>'; inherits: true; initial-value: 0; }
+
+@keyframes xp-cue {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* ---------- Phone: the arc becomes a swipeable row ---------- */
+
+@media (max-width: 47.99rem) {
+  .xp { height: 300vh; }
+  .xp-lineup {
+    left: 0; right: 0; width: auto;
+    bottom: 7vh;
+    height: auto;
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 2.5rem 1.25rem 4.5rem;
+    transform-style: flat;
+    scrollbar-width: none;
+  }
+  .xp-player {
+    position: relative;
+    flex: none;
+    width: 46vw;
+    margin: 0;
+    scroll-snap-align: center;
+    transform: translateY(calc((1 - var(--rise)) * 50vh));
+  }
+  .xp-figure { aspect-ratio: 3 / 4; }
+  .xp-reflection { display: none; }
+  .xp-ghost { font-size: 70vw; }
+  .xp-spotlight { top: 34%; }
+}
+
+/* ---------- Reduced motion: one composed, static frame ---------- */
+
+.xp[data-motion='off'] { height: auto; --p: 1; --a: 1; --b: 1; --c: 1; }
+.xp[data-motion='off'] .xp-stage { position: relative; min-height: 100vh; }
+/* The title stays in the document for screen readers; the static frame shows the lineup. */
+.xp[data-motion='off'] .xp-title { clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
+.xp[data-motion='off'] .xp-cue span { animation: none; }
+.xp[data-motion='off'] .xp-figure,
+.xp[data-motion='off'] .xp-player { transition: none; }
+
+.xp[data-phase='intro'] .xp-player { pointer-events: none; }
+
+.xp-figure.has-photo img { object-position: 50% 12%; }
+

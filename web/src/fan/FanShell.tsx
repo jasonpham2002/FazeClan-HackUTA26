@@ -49,7 +49,7 @@ export function FanShell({ account, signInVisible, extraLinks, children }: {
       <header className="fz-topbar">
         <div className="fz-container">
           <div className="fz-topbar-row">
-            <Link to="/players" className="fz-brand" aria-label="FaZe ID home">
+            <Link to="/faze-id" className="fz-brand" aria-label="FaZe ID">
               <img src={logo} alt="" width={44} height={29} />
               <span className="fz-wordmark">FaZe <span>ID</span></span>
             </Link>

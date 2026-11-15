@@ -12,7 +12,7 @@ import type {
   Reward, RewardInput, Role,
 } from '../types'
 import {
-  sampleHighlights, sampleInsights, sampleMatches, samplePlayers, sampleStats, sampleTournaments,
+  rosterPlayers, sampleHighlights, sampleInsights, sampleMatches, samplePlayers, sampleStats, sampleTournaments,
 } from './players.sample'
 import type { Db, StoredApplication } from './seed'
 
@@ -144,7 +144,7 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
   const notFound = (what: string): never => { throw new ApiError(404, 'NOT_FOUND', `${what} was not found.`) }
   const invalid = (message: string): never => { throw new ApiError(422, 'VALIDATION_FAILED', message) }
 
-  const playerOf = (id: string) => samplePlayers.find(player => player.id === id) ?? notFound('Player')
+  const playerOf = (id: string) => [...rosterPlayers, ...samplePlayers].find(player => player.id === id) ?? notFound('Player')
   const marketOf = (db: Db, id: string) => stateOf(db).markets.find(market => market.id === id) ?? notFound('Prediction market')
 
   function publicMarket(market: StoredMarket, userId: string | null): PredictionMarket {
@@ -175,7 +175,7 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
   const people = (db: Db) => [db.fan, ...db.otherFans, ...db.applications.map(app => app.applicant)]
 
   return {
-    listPlayers: () => call('read', () => samplePlayers),
+    listPlayers: () => call('read', () => rosterPlayers),
     getPlayer: id => call('read', () => playerOf(id)),
     getPlayerStats: id => call('read', () => {
       playerOf(id)

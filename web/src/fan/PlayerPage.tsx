@@ -10,7 +10,7 @@ import { Badge, Button, EmptyState, ErrorState, linkButtonClass, linkClass, Load
 import { formatDateTime } from '../lib/format'
 import { canChart, observations, plot, standoutMatch } from '../lib/playerStats'
 import {
-  formatDate, formatStat, PickStateBadge, pickState, PlayerPortrait, RosterBadge, SampleBadge, statLabels, useFan,
+  formatDate, formatStat, isUnverified, PickStateBadge, PREVIEW_LABEL, pickState, PlayerPortrait, RosterBadge, SampleBadge, statLabels, useFan,
 } from './fazeid-ui'
 import { eventUnavailable } from './logic'
 import { useReveal } from './useReveal'
@@ -93,6 +93,7 @@ function Identity({ player }: { player: Player }) {
           <div className="fz-rise flex flex-wrap items-center gap-x-4 gap-y-2" style={rise(0)}>
             <span className="text-white"><RosterBadge status={player.rosterStatus} /></span>
             {player.isDemo && <SampleBadge label="Placeholder player" />}
+            {isUnverified(player) && <SampleBadge label={PREVIEW_LABEL} />}
           </div>
           <div className="space-y-3">
             <h1 className={`fz-display fz-rise ${long ? 'text-[clamp(3rem,9vw,6.5rem)]' : 'text-[clamp(4rem,12vw,9rem)]'}`} style={rise(1)}>
@@ -367,7 +368,7 @@ function Analytics({ player }: { player: Player }) {
     <Section
       title="Performance"
       meta={`${data.period.label} · ${formatDate(data.period.start)} to ${formatDate(data.period.end)}${data.mapsPlayed !== null ? ` · ${data.mapsPlayed} maps` : ''}`}
-      actions={data.isDemo ? <SampleBadge label="Placeholder numbers" /> : undefined}
+      actions={data.isDemo ? <SampleBadge label="Demo numbers — not real statistics" /> : undefined}
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
