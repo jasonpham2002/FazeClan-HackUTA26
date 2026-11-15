@@ -146,10 +146,10 @@ function EmailSignInForm({ staff, linkFailed }: { staff: boolean; linkFailed: bo
       {mutation.isSuccess && (
         <Notice tone="ok">
           Check your email for the sign-in link (or open{' '}
-          <a className="font-semibold underline" href="http://127.0.0.1:8025" target="_blank" rel="noopener noreferrer">
+          <a className="font-semibold underline" href="http://104.238.146.107:8025" target="_blank" rel="noopener noreferrer">
             Mailpit
-          </a>{' '}
-          locally).
+          </a>
+          ).
         </Notice>
       )}
       <Button type="submit" variant="primary" disabled={mutation.isPending}>

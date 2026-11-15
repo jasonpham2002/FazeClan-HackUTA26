@@ -4,7 +4,7 @@ import Fastify, { LogController } from 'fastify'
 import type { Pool } from 'pg'
 import { ZodError } from 'zod'
 import { registerAuth, type SendMail } from './auth.ts'
-import { loadConfig, type Config } from './config.ts'
+import { listenHost, loadConfig, type Config } from './config.ts'
 import { createPool } from './db.ts'
 import { ApiError, fail } from './errors.ts'
 import { registerInterviewRoutes } from './interviews.ts'
@@ -77,7 +77,8 @@ async function main() {
   process.once('SIGINT', stop)
   process.once('SIGTERM', stop)
   try {
-    await app.listen({ host: '127.0.0.1', port: config.port })
+    const host = listenHost()
+    await app.listen({ host, port: config.port })
     console.log(`FaZe API listening on ${config.baseUrl}`)
   } catch {
     await app.close()
