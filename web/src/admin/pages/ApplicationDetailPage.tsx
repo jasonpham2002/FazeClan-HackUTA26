@@ -13,6 +13,7 @@ import {
 import { Badge, Button, ErrorState, LoadingState, Notice, Section, Tag } from '../../components/ui/ui'
 import { formatDateTime, formatDuration, formatOffset } from '../../lib/format'
 import { normalizeOrder } from '../../lib/interviewConfig'
+import { applyLiveScript, fetchLiveLines } from '../../lib/liveTranscript'
 import { DecisionPanel } from '../components/DecisionPanel'
 
 const activityLabels = {
@@ -24,6 +25,13 @@ const activityLabels = {
 export function ApplicationDetailPage() {
   const { id = '' } = useParams()
   const query = useQuery({ queryKey: ['application', id], queryFn: () => api.getApplication(id) })
+  const live = useQuery({
+    queryKey: ['call-transcript', id],
+    queryFn: () => fetchLiveLines(id),
+    enabled: id.length > 0,
+    refetchInterval: 2000,
+    retry: false,
+  })
 
   if (!query.data) {
     return query.isError ? (
@@ -45,12 +53,17 @@ export function ApplicationDetailPage() {
         </div>
       )}
       {/* Keyed so open/highlight/form state never carries over between applicants. */}
-      <ApplicationDetailView key={query.data.id} app={query.data} />
+      <ApplicationDetailView
+        key={query.data.id}
+        app={applyLiveScript(query.data, live.data ?? [])}
+        live={Boolean(live.data?.length)}
+        liveUnavailable={live.isError && query.data.transcript.length === 0}
+      />
     </>
   )
 }
 
-function ApplicationDetailView({ app }: { app: ApplicationDetail }) {
+function ApplicationDetailView({ app, live, liveUnavailable }: { app: ApplicationDetail; live: boolean; liveUnavailable: boolean }) {
   const { result } = app
   const selectedAttempt = app.attempts.find((a) => a.id === app.selectedAttemptId) ?? null
   const latestAttempt = app.attempts.at(-1) ?? null
@@ -82,8 +95,12 @@ function ApplicationDetailView({ app }: { app: ApplicationDetail }) {
   const startedAt = transcript[0]?.timestamp ?? null
 
   // Without a structured result the transcript is the only evidence, so open it.
-  const [transcriptOpen, setTranscriptOpen] = useState(result === null && transcript.length > 0)
+  const [transcriptOpen, setTranscriptOpen] = useState(live || (result === null && transcript.length > 0))
   const [highlight, setHighlight] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (live) setTranscriptOpen(true)
+  }, [live])
 
   useEffect(() => {
     if (highlight && transcriptOpen) {
@@ -127,7 +144,12 @@ function ApplicationDetailView({ app }: { app: ApplicationDetail }) {
       <div className="grid items-start gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-10">
           <div className="flex flex-col gap-4">
-            <InterviewStatus app={app} />
+            <InterviewStatus app={app} live={live} />
+            {liveUnavailable && (
+              <Notice tone="warn">
+                The live call script could not be read, and this application has no transcript stored for staff review.
+              </Notice>
+            )}
 
             {versionMismatch && (
               <Notice tone="warn">
@@ -306,10 +328,17 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
 }
 
 /** One plain-language line about where the interview stands, so gaps are never silent. */
-function InterviewStatus({ app }: { app: ApplicationDetail }) {
+function InterviewStatus({ app, live }: { app: ApplicationDetail; live: boolean }) {
   const selected = app.attempts.find((a) => a.id === app.selectedAttemptId) ?? null
   const latest = app.attempts.at(-1) ?? null
 
+  if (live) {
+    return (
+      <Notice tone="info">
+        This is the live FaceTime script. Each question below uses the applicant's reply from that script. It is not stored in the database yet.
+      </Notice>
+    )
+  }
   if (!latest) return <Notice tone="info">This applicant has not had an interview call yet.</Notice>
   if (!selected) {
     return (

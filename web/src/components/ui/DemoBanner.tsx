@@ -17,7 +17,7 @@ export function DemoBanner() {
           Fixture mode
         </span>
         <span className="text-muted">
-          Sample data stored only in this browser. No real applicants or calls; nothing is sent to a server.
+          Applications stay in this browser. Call this number places a FaceTime to the demo phone.
         </span>
         <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
           <label htmlFor="simulate-failure" className="text-muted">

@@ -9,7 +9,9 @@ import { FanDetailsForm } from '../components/ui/FanDetailsForm'
 import { ApplicationStatusBadge, CallStatusBadge } from '../components/ui/StatusBadge'
 import { Button, Card, EmptyState, ErrorState, linkButtonClass, LoadingState, Notice } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
+import { CallTranscript } from './CallTranscript'
 import { canRequestCall, eventUnavailable, fanStatusText, normalizePhone } from './logic'
+import { placeProfileCall } from './placeCall'
 
 const fixture = dataSource === 'fixtures'
 const meOptions = { queryKey: ['fan', 'me'], queryFn: api.getFanMe }
@@ -102,7 +104,16 @@ export function FanApplicationPage() {
     const value = query.state.data
     return value && (value.status === 'review_pending' || ['queued', 'dialing', 'connected'].includes(value.call?.status || '')) && value.call?.processingStatus !== 'failed' ? 3000 : false
   } })
-  const mutation = useMutation({ mutationFn: (action: 'call' | 'accept' | 'missed' | 'completed') => action === 'call' ? api.requestFanCall(id) : action === 'accept' ? api.acceptFanInvitation(id) : api.simulateFanCall(id, action), onSuccess: async () => { setConfirmed(''); await queries.invalidateQueries() }, onError: error => { if (error instanceof ApiError && error.status === 409) void queries.invalidateQueries({ queryKey: ['fan', 'application', id] }) } })
+  const mutation = useMutation({ mutationFn: async (action: 'call' | 'accept' | 'missed' | 'completed') => {
+    if (action === 'call' && fixture) {
+      const phone = normalizePhone(app.data?.profile.phone || '')
+      if (!phone) throw new ApiError(422, 'PHONE_REQUIRED', 'Add a phone number including its country code.')
+      await placeProfileCall(id, phone)
+    }
+    if (action === 'call') return api.requestFanCall(id)
+    if (action === 'accept') return api.acceptFanInvitation(id)
+    return api.simulateFanCall(id, action)
+  }, onSuccess: async () => { setConfirmed(''); await queries.invalidateQueries() }, onError: error => { if (error instanceof ApiError && error.status === 409) void queries.invalidateQueries({ queryKey: ['fan', 'application', id] }) } })
   if (app.isPending) return <LoadingState />
   if (app.isError && (!app.data || (app.error instanceof ApiError && [401,403,404].includes(app.error.status)))) return <LoadError error={app.error} retry={() => app.refetch()} />
   if (!app.data) return null
@@ -112,10 +123,11 @@ export function FanApplicationPage() {
   return <div className="space-y-6"><Link to="/profile" className="text-sm underline">My profile</Link><h1 className={pageTitle}>{value.event.title}</h1><div className="flex flex-wrap gap-5"><ApplicationStatusBadge status={value.status} /><CallStatusBadge status={value.call?.status || null} /></div><p className="text-lg text-muted" role="status">{fanStatusText(value)}</p>
     {app.isError && <ErrorState error={app.error} onRetry={() => app.refetch()} />}
     <div className="grid gap-6 md:grid-cols-2"><Card title="Your event"><p>{formatDateTime(value.event.startsAt, value.event.timezone)}<br />{value.event.location}</p><p className="mt-4 text-sm text-muted">Application received {formatDateTime(value.submittedAt)}<br />Interview version {value.interviewVersion.versionNumber}</p></Card><Card title={canRequestCall(value) ? 'Ready when you are' : 'Next steps'}><div className="space-y-4">
-      {canRequestCall(value) && !fixture ? <><Notice>This runs a sample interview for staff review.</Notice><Button variant="primary" disabled={mutation.isPending} onClick={() => mutation.mutate('call')}>Run sample interview</Button></> : canRequestCall(value) ? <><p className="text-sm text-muted">Demo phone</p><p className="font-semibold">{value.profile.phone || 'No phone number on file'}</p><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={confirmed === phoneKey} onChange={change => setConfirmed(change.target.checked ? phoneKey : '')} disabled={mutation.isPending} /><span>I confirm this is my number and I am ready for the simulated interview.</span></label><Button variant="primary" disabled={mutation.isPending || confirmed !== phoneKey || !value.profile.phone || !normalizePhone(value.profile.phone)} onClick={() => mutation.mutate('call')}>Simulate call request</Button></> : value.status === 'invited' ? <>{acceptUnavailable && <Notice tone="warn">This invitation has expired or all available spots have been claimed. Contact event staff.</Notice>}<Button variant="primary" disabled={mutation.isPending || acceptUnavailable} onClick={() => mutation.mutate('accept')}>Accept invitation</Button></> : <p>{fanStatusText(value)}</p>}
+      {canRequestCall(value) && !fixture ? <><Notice>This runs a sample interview for staff review.</Notice><Button variant="primary" disabled={mutation.isPending} onClick={() => mutation.mutate('call')}>Run sample interview</Button></> : canRequestCall(value) ? <><p className="text-sm text-muted">Calling this number</p><p className="font-semibold">{value.profile.phone || 'No phone number on file'}</p><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={confirmed === phoneKey} onChange={change => setConfirmed(change.target.checked ? phoneKey : '')} disabled={mutation.isPending} /><span>I confirm FaceTime should call this number.</span></label><Button variant="primary" disabled={mutation.isPending || confirmed !== phoneKey || !value.profile.phone || !normalizePhone(value.profile.phone)} onClick={() => mutation.mutate('call')}>{mutation.isPending ? 'Calling…' : 'Call this number'}</Button></> : value.status === 'invited' ? <>{acceptUnavailable && <Notice tone="warn">This invitation has expired or all available spots have been claimed. Contact event staff.</Notice>}<Button variant="primary" disabled={mutation.isPending || acceptUnavailable} onClick={() => mutation.mutate('accept')}>Accept invitation</Button></> : <p>{fanStatusText(value)}</p>}
       {mutation.isError && <ErrorState error={mutation.error} />}<Button onClick={() => app.refetch()} disabled={app.isFetching || mutation.isPending}>Refresh status</Button>
     </div></Card></div>
-    {fixture && <Card title="Connected demo walkthrough"><div className="space-y-4"><Notice tone="warn">No real call or AI evaluation occurs. Sample interview completion creates explicitly synthetic answers in the shared staff store.</Notice>{['queued','dialing','connected'].includes(value.call?.status || '') && <div className="flex flex-wrap gap-3"><Button onClick={() => mutation.mutate('completed')} disabled={mutation.isPending}>Simulate completed interview</Button><Button onClick={() => mutation.mutate('missed')} disabled={mutation.isPending}>Simulate missed call</Button></div>}<Link to={`/admin/applications/${id}`} className={linkButtonClass}>Review in staff dashboard</Link></div></Card>}
+    <CallTranscript applicationId={id} />
+    {fixture && <Card title="Connected demo walkthrough"><div className="space-y-4"><Notice tone="warn">Call this number places the FaceTime. These buttons only write a synthetic transcript into the staff demo after you ask for one.</Notice>{['queued','dialing','connected'].includes(value.call?.status || '') && <div className="flex flex-wrap gap-3"><Button onClick={() => mutation.mutate('completed')} disabled={mutation.isPending}>Simulate completed interview</Button><Button onClick={() => mutation.mutate('missed')} disabled={mutation.isPending}>Simulate missed call</Button></div>}<Link to={`/admin/applications/${id}`} className={linkButtonClass}>Review in staff dashboard</Link></div></Card>}
   </div>
 }
 
