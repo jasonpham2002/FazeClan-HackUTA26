@@ -3,7 +3,7 @@
 One Vite + React + TypeScript app for both audiences:
 
 - **Staff dashboard** (Khoi) under `/admin` — built.
-- **Fan pages** (Johnny) under `/`, `/sign-in`, `/events/:id`, `/applications/:id`, `/profile` ? connected through the shared API adapter.
+- **Fan pages** (Johnny) under `/`, `/sign-in`, `/events/:id`, `/applications/:id`, `/profile` — connected through the shared API adapter.
 
 ## Run it
 
@@ -35,8 +35,34 @@ See the [live integration guide](INTEGRATION.md#run-with-the-local-backend) for 
 | `/admin/events/:id/interview` | Interview editor: save draft, publish version |
 | `/admin/events/:id/applications` | Application list with filters and pagination |
 | `/admin/applications/:id` | Application detail: Q&A with evidence, transcript, activity, decision |
+| `/admin/insights` | Insights across events: turnout, show-up, returning fans, drop-off, stated interests, question skip rates, and rule-based suggestions for the next event |
 
+### FaZe ID fan routes
+
+| Route | Screen |
+|---|---|
+| `/players` | Roster: clickable player cards, grouped by roster status |
+| `/players/:id` | Player profile, in this order: identity and analytics (stat cards, per-match chart, standout match, AI analysis), matches and tournament progress, highlights, fan events |
+| `/matches` | The esports calendar with free predictions (open, submitted, locked, correct, incorrect, void) |
+| `/rewards` | Points balance, proposed rewards with one working redemption, points-gated experiences |
+| `/profile` | My FaZe ID: points ledger, followed players, predictions, redemptions, applications |
+
+### FaZe ID staff routes
+
+| Route | Screen |
+|---|---|
+| `/admin/markets` | Create predictions; settle a result with a required source link and a confirmation that states how many fans are awarded |
+| `/admin/rewards` | Reward catalogue, stock, and the redemption list |
+| `/admin/fans/:id/points` | A fan's ledger, plus an adjustment that requires a reason |
+
+The event editor has a "FaZe ID points needed to apply" field (`minimumPoints`).
+
+**Placeholder data.** In fixture mode the roster, statistics, matches, highlights and AI text come from `src/api/fixtures/players.sample.ts`. They are generic placeholders ("SAMPLE-01"), never real players with invented numbers, and every screen labels them. Replace the exports of that one file with Johnny's verified bundle and Minh's fixtures; no page changes are needed. Predictions, points, rewards and the points-gated sample event live in `src/api/fixtures/fazeid.ts`, which mirrors the rules in Jason.md. In live mode none of this is used: each screen shows the API error until its endpoint exists.
 Fixture examples: `/admin/applications/app_maya` (clean), `app_devon` (partial call), `app_priya` (extraction failed, transcript kept), `app_luis` (missed call), `app_sam` (no call, no activity).
+
+Insights sample history: two past sample events, Fan Meetup Austin (Oct 2025) and Summer Watch Party Houston (Jun 2026), with attendance recorded. Maya, Jordan, Alex and Riley took part in them before applying to Community Night, so returning fans and "came back" have numbers. Because the backend lists every published event to fans, these past events also appear on the fan home page as closed. Older saved sample data gets them added automatically; "Reset sample data" also works.
+
+Insights logic lives in `src/lib/insights.ts`: `buildInsights` produces the API report (the fixture uses it directly), and `eventSuggestions` / `retentionSuggestions` derive the suggestions in the browser. Everything is group-level; nothing scores or labels an individual fan, and no rate-based suggestion is made from fewer than 5 fans.
 
 ## Layout
 
@@ -84,7 +110,43 @@ src/
 10. **Analytics** → counts plus `connectionRate` and `completionRate` as `{ numerator, denominator }` so the UI can state the denominator and show an em dash on zero.
 11. **Activity `type` values**: `application` | `invitation_accepted` | `attendance`.
 12. **Validation limits** (also Johnny): 1–6 questions, nonempty prompts, duration 60–300 s, follow-ups 0–2. Enforced client-side in `lib/interviewConfig.ts`; the server must enforce the same.
+13. **New endpoint `GET /admin/insights`** (staff only, not built yet) → `InsightsReport` in `types.ts`. It is read-only and uses existing tables only:
+    - per event: applied, interviewed (a completed call), ever invited (a `decisions` row with `invited`), accepted, attended (an `attendance` row in `activity_events`), plus returning applicants (applied to an event that started earlier)
+    - stated interests from `interview_results.interests`, and answer completeness per question from `answers`
+    - retention: for each past event followed by a later one, attendees and how many applied to a later event
+    - `includesDemoData` when any counted record has `is_demo`
 
+    Suggestions are not in the response; the UI derives them. `src/lib/insights.ts` has the reference calculation, and `api/fixtures/insights.test.ts` shows the expected numbers.
+
+### FaZe ID contracts (all proposed, none built yet)
+
+Types are in `src/api/types.ts` under the three "FaZe ID" headings, methods in `client.ts`, routes in `http.ts`. List endpoints accept either a bare array or `{ <name>: [...] }` until envelopes are agreed.
+
+**Johnny (players, stats, matches)**
+
+1. `GET /players`, `GET /players/:id` → `Player`. `rosterStatus`: `active` | `benched` | `former` | `coach`. `imageUrl` only from an approved source, with `imageCredit`.
+2. `GET /players/:id/stats` → `PlayerStats`, the snapshot shape from your doc. A missing metric must be `null`. A coach or a player with no snapshot should return 404, which the page shows as "no statistics yet".
+3. **Addition to confirm:** `recentMatches: MatchStatLine[]` on the snapshot (one stat line per match). The chart and the standout-match view need it; they hide when it is absent or has fewer than two comparable values.
+4. `GET /players/:id/matches` → `{ matches: EsportsMatch[], tournaments: TournamentProgress[] }`. `participants` lists FaZe first.
+5. **Not in your endpoint list:** `GET /esports/matches`, every match for the calendar page.
+
+**Minh (highlights, AI analysis)**
+
+1. `GET /players/:id/highlights` → `Highlights`, as in your doc. Only YouTube `watchUrl`s are linked, and only a valid `videoId` is embedded (via `youtube-nocookie.com`).
+2. **Addition to confirm:** optional `startSeconds` per video, to start playback at a verified moment.
+3. `GET /players/:id/insights?snapshotId=` → `PlayerInsight`. The page shows it only when `status` is `ready` and its `snapshotId` equals the stats on screen. `metricRefs` such as `metrics.adr` are shown as "Based on: ADR".
+
+**Jason (follows, predictions, points, rewards, eligibility)**
+
+1. `GET /me/follows` (player IDs or `{ playerId }` rows), `PUT` / `DELETE /me/follows/:playerId`.
+2. `GET /predictions/markets` → `PredictionMarket[]` with `state` (`open` | `locked` | `settled` | `void`), the signed-in fan's `myPick`, and `result` with its `sourceUrl`. `POST /predictions/markets/:id/pick` body `{ optionId }`. The UI treats a pick as final on first submission.
+3. `GET /me/points` → `{ balance, entries }`. The UI never computes a balance.
+4. `GET /rewards`, `POST /rewards/:id/redeem` with an `Idempotency-Key` header (one key per confirmation, reused on retry), `GET /me/redemptions`.
+5. Staff: `POST /admin/prediction-markets`, `POST /admin/prediction-markets/:id/settle` body `{ optionId, sourceUrl }`, `POST` / `PATCH /admin/rewards`, `POST /admin/users/:id/point-adjustments` body `{ delta, reason }`.
+6. **Not in your endpoint list:** `GET /admin/prediction-markets` (with `pickCount` and `picksByOption`), `GET /admin/rewards`, `GET /admin/redemptions`, `GET /admin/users/:id/points`.
+7. `minimumPoints` on events, returned by `GET /events` and accepted by the admin event routes. Applying below the threshold should fail without charging; the fixture returns 403 `NOT_ELIGIBLE`.
+8. Error codes the fixture uses, to align: `PREDICTION_LOCKED`, `DUPLICATE_PICK`, `ALREADY_SETTLED`, `INSUFFICIENT_POINTS`, `OUT_OF_STOCK`, `REWARD_UNAVAILABLE`, `NOT_ELIGIBLE`.
+9. **Question:** may staff settle a market that is still open? The fixture allows it (and warns that it closes picks) so the demo does not have to wait for a lock time.
 ### Minh and Tuong (AI call team)
 
 1. **Transcript `speaker` values**: the UI expects `agent` | `applicant`.

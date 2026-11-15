@@ -22,6 +22,7 @@ interface FormState {
   startsLocal: string
   timezone: string
   capacity: string
+  minimumPoints: string
   deadlineLocal: string
   publicationStatus: PublicationStatus
 }
@@ -35,6 +36,7 @@ function toForm(event: EventRecord | null): FormState {
     startsLocal: event ? utcIsoToZonedLocal(event.startsAt, timezone) : '',
     timezone,
     capacity: event ? String(event.capacity) : '',
+    minimumPoints: String(event?.minimumPoints ?? 0),
     deadlineLocal: event ? utcIsoToZonedLocal(event.applicationDeadline, timezone) : '',
     publicationStatus: event?.publicationStatus ?? 'draft',
   }
@@ -50,6 +52,10 @@ function validate(form: FormState): { errors: Errors; input: EventInput | null }
   const capacity = Number(form.capacity)
   if (!form.capacity.trim() || !Number.isInteger(capacity) || capacity <= 0) {
     errors.capacity = 'Capacity must be a positive whole number.'
+  }
+  const minimumPoints = form.minimumPoints.trim() === '' ? 0 : Number(form.minimumPoints)
+  if (!Number.isInteger(minimumPoints) || minimumPoints < 0) {
+    errors.minimumPoints = 'Points needed must be zero or a positive whole number.'
   }
 
   const startsAt = zonedLocalToUtcIso(form.startsLocal, form.timezone)
@@ -70,6 +76,7 @@ function validate(form: FormState): { errors: Errors; input: EventInput | null }
       startsAt,
       timezone: form.timezone,
       capacity,
+      minimumPoints,
       applicationDeadline: deadline,
       publicationStatus: form.publicationStatus,
     },
@@ -135,7 +142,7 @@ function EventForm({ event }: { event: EventRecord | null }) {
     setSaved(false)
     setForm((current) => ({ ...current, [key]: value }))
   }
-  const text = (key: 'title' | 'location' | 'capacity' | 'startsLocal' | 'deadlineLocal', type = 'text') => ({
+  const text = (key: 'title' | 'location' | 'capacity' | 'minimumPoints' | 'startsLocal' | 'deadlineLocal', type = 'text') => ({
     id: key,
     type,
     className: inputClass,
@@ -234,6 +241,9 @@ function EventForm({ event }: { event: EventRecord | null }) {
           </Field>
           <Field label="Capacity" htmlFor="capacity" error={shown.capacity}>
             <input {...text('capacity', 'number')} min={1} />
+          </Field>
+          <Field label="FaZe ID points needed to apply" htmlFor="minimumPoints" hint="0 keeps the event open to every fan. Points unlock the application; they are not spent." error={shown.minimumPoints}>
+            <input {...text('minimumPoints', 'number')} min={0} step={1} />
           </Field>
           <Field label="Timezone" htmlFor="timezone" hint="Dates below are entered in this timezone.">
             <select id="timezone" className={inputClass} value={form.timezone} onChange={(e) => set('timezone', e.target.value)}>

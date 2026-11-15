@@ -99,13 +99,25 @@ function review(row: ReviewDto): ApplicationDetail {
  */
 export function createHttpClient(baseUrl: string): ApiClient {
   const authPath = baseUrl.endsWith('/api') ? '/auth' : '/api/auth'
-  async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  /**
+   * Accepts a bare array or `{ [key]: [...] }`, since the list envelopes are not agreed yet.
+   * Anything else is an invalid response, never an empty list.
+   */
+  function list<T>(body: unknown, key: string, optional = false): T[] {
+    if (Array.isArray(body)) return optional ? [] : (body as T[])
+    const value = (body as Record<string, unknown> | null)?.[key]
+    if (Array.isArray(value)) return value as T[]
+    if (optional) return []
+    throw new ApiError(200, 'INVALID_RESPONSE', `The API response has no "${key}" list.`)
+  }
+
+  async function request<T>(method: string, path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
     let response: Response
     try {
       response = await fetch(`${baseUrl}${path}`, {
         method,
         credentials: 'include',
-        headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+        headers: body === undefined ? extraHeaders : { 'Content-Type': 'application/json', ...extraHeaders },
         body: body === undefined ? undefined : JSON.stringify(body),
       })
     } catch {
@@ -211,6 +223,50 @@ export function createHttpClient(baseUrl: string): ApiClient {
     },
     recordAttendance: async (id) => {
       await request('POST', `/admin/applications/${enc(id)}/attendance`, {})
+    },
+    // CONFIRM (Jason): not implemented in the backend yet; shape is InsightsReport in types.ts.
+    getInsights: () => request('GET', '/admin/insights'),
+
+    // ----- FaZe ID. CONFIRM (Johnny, Minh, Jason): none of these routes exist yet, so in
+    // live mode each screen shows the API error until its owner ships the endpoint. -----
+    listPlayers: async () => list(await request('GET', '/players'), 'players'),
+    getPlayer: id => request('GET', `/players/${enc(id)}`),
+    getPlayerStats: id => request('GET', `/players/${enc(id)}/stats`),
+    getPlayerSchedule: async id => {
+      const body = await request<unknown>('GET', `/players/${enc(id)}/matches`)
+      return { matches: list(body, 'matches'), tournaments: list(body, 'tournaments', true) }
+    },
+    listMatches: async () => list(await request('GET', '/esports/matches'), 'matches'),
+    getPlayerHighlights: id => request('GET', `/players/${enc(id)}/highlights`),
+    getPlayerInsight: (id, snapshotId) => request('GET', `/players/${enc(id)}/insights?snapshotId=${enc(snapshotId)}`),
+    listFollows: async () =>
+      list<string | { playerId: string }>(await request('GET', '/me/follows'), 'follows')
+        .map(item => (typeof item === 'string' ? item : item.playerId)),
+    setFollow: async (playerId, following) => {
+      await request(following ? 'PUT' : 'DELETE', `/me/follows/${enc(playerId)}`)
+    },
+    listMarkets: async () => list(await request('GET', '/predictions/markets'), 'markets'),
+    submitPick: async (marketId, optionId) => {
+      await request('POST', `/predictions/markets/${enc(marketId)}/pick`, { optionId })
+    },
+    getMyPoints: () => request('GET', '/me/points'),
+    listRewards: async () => list(await request('GET', '/rewards'), 'rewards'),
+    redeemReward: async (rewardId, idempotencyKey) => {
+      await request('POST', `/rewards/${enc(rewardId)}/redeem`, {}, { 'Idempotency-Key': idempotencyKey })
+    },
+    listMyRedemptions: async () => list(await request('GET', '/me/redemptions'), 'redemptions'),
+    listAdminMarkets: async () => list(await request('GET', '/admin/prediction-markets'), 'markets'),
+    createMarket: async input => { await request('POST', '/admin/prediction-markets', input) },
+    settleMarket: async (id, input) => {
+      await request('POST', `/admin/prediction-markets/${enc(id)}/settle`, input)
+    },
+    listAdminRewards: async () => list(await request('GET', '/admin/rewards'), 'rewards'),
+    createReward: async input => { await request('POST', '/admin/rewards', input) },
+    updateReward: async (id, input) => { await request('PATCH', `/admin/rewards/${enc(id)}`, input) },
+    listAdminRedemptions: async () => list(await request('GET', '/admin/redemptions'), 'redemptions'),
+    getFanPoints: id => request('GET', `/admin/users/${enc(id)}/points`),
+    adjustFanPoints: async (id, input) => {
+      await request('POST', `/admin/users/${enc(id)}/point-adjustments`, input)
     },
     async getAnalytics(eventId) {
       const counts = await request<AnalyticsDto>('GET', `/admin/events/${enc(eventId)}/analytics`)

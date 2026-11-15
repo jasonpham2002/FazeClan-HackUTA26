@@ -10,7 +10,7 @@ import {
   CompletenessBadge,
   ProcessingBadge,
 } from '../../components/ui/StatusBadge'
-import { Badge, Button, ErrorState, LoadingState, Notice, Section, Tag } from '../../components/ui/ui'
+import { Badge, Button, ErrorState, linkClass, LoadingState, Notice, Section, Tag } from '../../components/ui/ui'
 import { formatDateTime, formatDuration, formatOffset } from '../../lib/format'
 import { normalizeOrder } from '../../lib/interviewConfig'
 import { applyLiveScript, fetchLiveLines } from '../../lib/liveTranscript'
@@ -132,6 +132,7 @@ function ApplicationDetailView({ app, live, liveUnavailable }: { app: Applicatio
         </div>
         <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-3 text-sm">
           <Meta label="Email">{app.applicant.email}</Meta>
+          <Meta label="FaZe ID"><Link to={`/admin/fans/${encodeURIComponent(app.applicant.id)}/points`} className={linkClass}>Points history</Link></Meta>
           <Meta label="Applied">{formatDateTime(app.submittedAt)}</Meta>
           <Meta label="Event">{app.event.title}</Meta>
           <Meta label="Interview version">
