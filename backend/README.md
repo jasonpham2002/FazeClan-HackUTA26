@@ -27,7 +27,7 @@ npm run seed
 npm start
 ```
 
-In a second terminal, start the worker with `npm run worker`. `GET http://127.0.0.1:3001/health` checks the database and returns `503` when unavailable. Restart the worker with the same configuration after a failure. Its database lease lets another process reclaim an incomplete fixture job after the lease expires.
+In a second terminal, start the worker with `npm run worker`. `GET http://127.0.0.1:3001/health` checks database connectivity and engagement schema readiness. Restart the worker with the same configuration after a failure. Its database lease lets another process reclaim an incomplete fixture job after the lease expires.
 
 To exercise the flow, sign in as `staff@example.test` or `fan@example.test` and open the one-time link in the inbox at `http://127.0.0.1:8025`. `invited@example.test` and `waitlisted@example.test` are seeded invitation examples. The seed provides one upcoming event and four published questions. `npm run cleanup` removes the seeded profiles that can safely be removed and deletes the seed event once unrelated records no longer reference it.
 
@@ -47,7 +47,7 @@ Use `http://127.0.0.1:3001`. The shared fan and staff frontend uses `http://127.
 | `POST /applications/:id/call` | `202 {callAttemptId,mode}`. While an attempt is active, repeating the request returns its original ID. Poll the application for status. |
 | `POST /applications/:id/accept` | Accept the current invitation. Returns the application on success, including repeats. `409 EVENT_FULL` means no seats remain. |
 | `GET /admin/events` · `GET /admin/events/:id` | `{events}` or a single event, including drafts. |
-| `POST /admin/events` · `PATCH /admin/events/:id` | Create with `{title,description,location,startsAt,deadline,capacity,status?,timezone?}` or patch these fields (`capacity` in `1..100000`, `status` is `draft` or `published`). Initializes a default interview draft on create, and automatically publishes interview version 1 when `status` is `published` and no version exists yet. |
+| `POST /admin/events` · `PATCH /admin/events/:id` | Create with `{title,description,location,startsAt,deadline,capacity,status?,timezone?,minimumPoints?}` or patch these fields (`capacity` in `1..100000`, `status` is `draft` or `published`). Initializes a default interview draft on create, and automatically publishes interview version 1 when `status` is `published` and no version exists yet. |
 | `GET /admin/events/:id/interview` · `PUT /admin/events/:id/interview-draft` | Return `{draft,draftUpdatedAt,publishedVersion,hasUnpublishedChanges}`, falling back to the default interview draft when `events.draft` is null. Save `{intro,tone,maxDurationSeconds,questions}` where each question is `{id,prompt,purpose,required,order,maxFollowUps}`. Limit to 1–6 questions, 60–300 seconds, and 0–2 follow-ups per question. |
 | `POST /admin/events/:id/interview-publish` | Creates a new version from the saved draft (or falls back to the default interview draft when `events.draft` is null) and returns `{id,version,publishedAt}`. Existing applications retain their original version. |
 | `GET /admin/applications` | `{applications,total,page,pageSize}`. Filter by `eventId`, application `status`, latest `callStatus`, and `search`. Use `page` and `pageSize` for pagination. |
@@ -55,8 +55,47 @@ Use `http://127.0.0.1:3001`. The shared fan and staff frontend uses `http://127.
 | `POST /admin/applications/:id/decision` | `{decision:"invited"\|"waitlisted",reason?}`. Returns `{id,decision,reviewerId,reason,createdAt}`. |
 | `POST /admin/applications/:id/attendance` | Marks an `accepted` application as attended (`{recorded:true}`). Repeating the request is idempotent. Returns `409 ATTENDANCE_UNAVAILABLE` if the application is not `accepted`. |
 | `GET /admin/events/:id/analytics` | `{applications,callsAttempted,callsConnected,interviewsCompleted,reviewsPending,invitationsIssued,accepted,connectionRate,interviewCompletionRate}`. Connection rate divides connected attempts by attempted calls. Completion rate divides completed interviews by connected attempts. Zero denominators return `null`. |
+| `GET /admin/insights` | `{generatedAt,includesDemoData,events,retention}`. Group-level funnel, demand, show-up, fill, new/returning audience, drop-off, top interview interests, question completeness, and attendance cohorts across events. |
 
 Call status progresses from `queued` to `dialing` to `connected` to `completed`, with terminal outcomes `missed`, `failed`, and `canceled` where applicable. Processing status is independent (`pending`, `ready`, or `failed`). Show the stored transcript even if extraction failed. New fans see only activity actually recorded by this application.
+
+## Predictions, points, and rewards
+
+Migrations `006_engagement.sql`, `007_engagement_compat.sql`, and `008_engagement_ui_compat.sql` add the engagement tables, reward compatibility fields (`description`, concept reward costs, `merch` kind, optional `stock`, and `requested` redemption status), and a zero-default `minimumPoints` field for events. `npm run seed` seeds `Sample FaZe merch` alongside the demo users and `Community Night` event. Apply migrations with the normal runner. Use the existing development connection to rehearse in a disposable `faze_test_*` schema. The backend test suite creates a labeled CS2 replay and a 50-point event there, then drops the schema.
+
+### Esports data handoff
+
+Publish these views in the app schema over Johnny's imported records. Cast IDs to text and keep them stable across reimports. The team arrays are JSONB arrays of `{ id, label }` objects with distinct team IDs. Match winner requires exactly two participants.
+
+| View | Columns |
+| --- | --- |
+| `engagement_players` | `id text` |
+| `engagement_matches` | `id text`, `title text`, `starts_at timestamptz`, `participants jsonb`, `is_demo boolean` |
+| `engagement_tournaments` | `id text`, `title text`, `teams jsonb`, `is_demo boolean` |
+
+Johnny's migration and these views must be available before creating sourced markets or new follows. Those operations return `503 ESPORTS_DATA_UNAVAILABLE` if the corresponding view is missing. Existing markets carry their own title, options, and deadline. They continue to work across import refreshes. Adjusting a match start in the import leaves its existing market deadline in place.
+
+### Fan and staff API
+
+| Endpoint | Request or response |
+| --- | --- |
+| `GET /me/follows` | `{ playerIds, follows }` for the signed-in fan. |
+| `PUT /me/follows/:playerId`, `DELETE /me/follows/:playerId` | No body. Both return `204` and are idempotent. |
+| `GET /predictions/markets` | Public catalog `{ markets }` (sets `myPick` when signed in as a fan). Each market includes `id`, `kind`, `type`, `referenceId`, `matchId`, `tournamentId`, `teamId`, `title`, `options`, `locksAt`, `awardPoints`, `award`, `isDemo`, `status`/`state` (`open`, `locked`, `settled`, `void`), `myPick`, and `result`. Pick and result are null before they exist (and `result` is null when voided). |
+| `POST /predictions/markets/:id/pick` | `{ "optionId": "first" }`. Returns `201` with `{ optionId, submittedAt }`. The first pick is final. |
+| `POST /admin/prediction-markets` | Sourced (`{ kind, referenceId, teamId?, locksAt, awardPoints? }`) or direct (`{ type, title, matchId, tournamentId, options, locksAt, award }`). `awardPoints` / `award` defaults to 100. `locksAt` is ISO 8601 with a time zone and must be in the future. Match winner sourced markets must lock by match start. |
+| `GET /admin/prediction-markets`, `GET /admin/prediction-markets/:id/picks` | `{ markets }` (with `pickCount`, `picksByOption`, `createdBy`, and `reviewerId`) and `{ picks, total, page, pageSize }`. |
+| `POST /admin/prediction-markets/:id/settle` | `{ optionId, sourceUrl }`. Set `optionId` to null for a void. Staff submits an HTTP(S) result source to settle an open or locked market (settling an open market closes picks immediately). Returns `{ optionId, sourceUrl, settledAt, reviewerId }`. Identical retries return the saved result. |
+| `GET /me/points`, `GET /admin/users/:id/points` | `{ balance, entries, total, page, pageSize }`. Entries include `id`, `delta`, `reason`, `sourceType`, `sourceId`, and `createdAt`. Staff also sees `reviewerId`. Pagination defaults to page 1 and size 25, maximum size 100. |
+| `POST /admin/users/:id/point-adjustments` | `{ delta, reason, idempotencyKey? }` (or `Idempotency-Key` header; generates a key if omitted). The key is a UUID. Returns the saved entry, with `201` on creation and `200` on replay. |
+| `GET /rewards`, `GET /admin/rewards` | Public catalog (`GET /rewards`) or full admin catalog (`GET /admin/rewards`) with `id`, `title`, `description`, `kind`, `terms`, `pointCost`, `cost`, `stock`, `active`, `isDemo`, and `redeemable`. |
+| `POST /admin/rewards`, `PATCH /admin/rewards/:id` | Create with `kind` (`merch` / `merchandise`, normalized to `merch`, `raffle`, `early_access`, `priority`), `title`, optional `description` & `terms`, plus `pointCost`/`cost` (required for `merch`) and optional `stock` (`null` means not stock-limited). `active` and `isDemo` default to true on creation. Patch any of these fields. Returns the saved reward. |
+| `POST /rewards/:id/redeem` | `{ idempotencyKey }` or `Idempotency-Key` HTTP header with a UUID. Returns `{ id, rewardId, rewardTitle, pointCost, cost, status, createdAt }` (`status` starts as `'requested'`) with `201` on creation and `200` on replay. Reuse the same key for retries of one claim. |
+| `GET /me/redemptions`, `GET /admin/redemptions`, `GET /admin/rewards/:id/redemptions` | `{ redemptions }` with saved claims (`rewardTitle`, `pointCost`, `cost`, `status` in `'requested' \| 'fulfilled' \| 'canceled'`). Staff routes include `userId` and `fan: { id, displayName, email }`. |
+
+For the demo, create `{ "kind": "merch", "title": "Sample FaZe merch", "terms": "Proposed demo benefit", "pointCost": 50, "stock": 10 }`. Set `minimumPoints: 50` on a published demo event. A 100-point win funds the claim and leaves 50 points for eligibility. Successful applications and interviews leave the balance alone. Staff-confirmed new attendance adds 25 points.
+
+Errors use `{ error: { code, message } }`. Handle `400 INVALID_OPTION`, `409 MARKET_LOCKED`, `409 DUPLICATE_PICK`, `409 SETTLEMENT_CONFLICT`, `409 INSUFFICIENT_POINTS`, `409 REWARD_OUT_OF_STOCK`, `409 REWARD_UNAVAILABLE`, `409 IDEMPOTENCY_CONFLICT`, and `409 INSUFFICIENT_EVENT_POINTS` distinctly. After a successful write, refetch the affected resources. Web fixture and live clients should return the same shapes. A live request failure should display its error.
 
 ## Agent ingestion contract
 
@@ -81,7 +120,7 @@ The local worker runs sample interviews. Coordinate the Muse agent handoff with 
 
 - The real API requires a populated `backend/.env`; `.env.example` contains blank placeholders, not credentials. Supply `DATABASE_URL`, separate auth/ingestion secrets, and any required CA file using your local credential source. Never commit these values.
 - A yellow Fixture mode banner means the frontend uses browser localStorage and will not send sign-ups to PostgreSQL. Use `VITE_DATA_SOURCE=live`, the API base URL, and restart Vite. Complete the email magic link before expecting a verified user account. The local auth service permits `@example.test` accounts.
-- Check `/health`: it queries the database and returns 503 when connectivity fails. An empty database also needs `npm run migrate` and `npm run seed` before using the seeded reviewer/event.
+- `GET /health` returns `503 DATABASE_UNAVAILABLE` if the database query fails and `503 SCHEMA_NOT_READY` if the engagement tables are missing. Run `npm run migrate` before starting a new release. An empty development database also needs `npm run seed` to add the demo reviewer and event.
 - Database objects are in the `faze` schema, not necessarily `public`. Query `SELECT id,email,role FROM faze."user"` in your database console after verifying sign-in. Confirm the console and API use the same service/database/schema.
 - Migration checksums now normalize LF/CRLF line endings and accept historical checksums from either platform. The migration runner updates only recognized line-ending variants to the canonical hash; actual SQL changes still fail. Do not edit applied migration SQL to bypass an error.
 - Backend tests default to disposable `faze_test_*` schemas. They are not expected to add accounts to the shared `faze` schema. Do not set `TEST_SCHEMA=faze` for a routine test run.

@@ -70,6 +70,21 @@ PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node scripts/live-smoke.mjs
 
 The smoke test creates an application, publishes a new version, and makes a staff decision in that schema. Run it against a fresh test schema for each rehearsal.
 
+## Vultr demo release
+
+The current Vultr demo serves the web app at `http://104.238.146.107` and the API directly on port `3001`. The sign-in screen opens Mailpit on port `8025` of the configured API host. The API delivers to Mailpit over loopback SMTP on the server.
+
+1. From `backend/` on the host, run `npm run migrate` with the deployed API's existing database configuration before or alongside restarting the updated API and worker (deploy the updated `backend/` code before or together with migrating, because `008_engagement_ui_compat.sql` converts `rewards.kind` to `merch` and `reward_redemptions.status` to `requested`). This release needs `006_engagement.sql`, `007_engagement_compat.sql`, and `008_engagement_ui_compat.sql` (and optionally `npm run seed` to add the sample reward `Sample FaZe merch`). Use Node.js 24 or newer. With the current public addresses, the API uses `PUBLIC_BASE_URL=http://104.238.146.107:3001`, trusts `http://104.238.146.107` in `APP_ORIGINS`, and sends through `MAIL_HOST=127.0.0.1` and `MAIL_PORT=1025`.
+2. From `web/`, build and serve the resulting `dist/` with the existing static site configuration. Explicit build variables take precedence over local Vite settings.
+
+   ```sh
+   VITE_DATA_SOURCE=live VITE_API_BASE_URL=http://104.238.146.107:3001 npm run build
+   ```
+
+3. After the restart, check `GET /health` on port `3001` for `{"status":"ok"}` and `GET /events` for JSON with `minimumPoints` on existing events. With a demo account, request a fresh link and verify that the hosted inbox receives it and sends the browser back to the Vultr site. The shared inbox is for test accounts and synthetic data.
+
+Johnny's data views are required for real player follows and market creation. The backend's engagement endpoints are available after migration. The new screens depend on Khoi's web integration. See the [engagement API handoff](../backend/README.md#predictions-points-and-rewards).
+
 ## Verification
 
 ```powershell

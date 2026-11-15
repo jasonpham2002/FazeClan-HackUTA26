@@ -45,7 +45,10 @@ export function loadConfig(): Config {
     schema: process.env.DB_SCHEMA ?? 'faze',
     baseUrl: publicBaseUrl(port),
     port,
-    origins: (process.env.APP_ORIGINS ?? 'http://127.0.0.1:3000,http://127.0.0.1:3002,http://127.0.0.1:5189').split(',').map(origin => origin.trim()),
+    origins: (process.env.APP_ORIGINS ?? 'http://127.0.0.1:3000,http://127.0.0.1:3002,http://127.0.0.1:5189')
+      .split(',')
+      .map(origin => origin.trim().replace(/\/+$/, ''))
+      .filter(Boolean),
     authSecret: BETTER_AUTH_SECRET,
     agentToken: AGENT_INGEST_TOKEN,
     mailHost,

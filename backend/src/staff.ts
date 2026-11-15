@@ -18,6 +18,7 @@ const eventInput = z.strictObject({
     catch { return false }
   }).optional(),
   capacity: z.number().int().min(1).max(100_000),
+  minimumPoints: z.int().min(0).max(2_147_483_647).optional(),
   status: z.enum(['draft', 'published']).optional(),
 })
 
@@ -124,9 +125,11 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
     const status = body.status ?? 'draft'
     const created = await transaction(db, async client => {
       const { rows: [event] } = await client.query(`
-        INSERT INTO events (title,description,location,starts_at,deadline,capacity,status,timezone,draft) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        INSERT INTO events (title,description,location,starts_at,deadline,capacity,status,timezone,draft,minimum_points)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         RETURNING id
-      `, [body.title, body.description, body.location, body.startsAt, body.deadline, body.capacity, status, body.timezone ?? 'America/Chicago', JSON.stringify(defaultDraft)])
+      `, [body.title, body.description, body.location, body.startsAt, body.deadline, body.capacity, status,
+        body.timezone ?? 'America/Chicago', JSON.stringify(defaultDraft), body.minimumPoints ?? 0])
       if (status === 'published') {
         await publishVersionFromDraft(client, event.id, defaultDraft)
       }
@@ -152,8 +155,10 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
       await client.query(`
         UPDATE events SET title=COALESCE($2,title), description=COALESCE($3,description),
           location=COALESCE($4,location), starts_at=COALESCE($5,starts_at), deadline=COALESCE($6,deadline),
-          capacity=COALESCE($7,capacity), status=COALESCE($8,status), timezone=COALESCE($9,timezone), updated_at=now() WHERE id=$1
-      `, [id, patch.title, patch.description, patch.location, patch.startsAt, patch.deadline, patch.capacity, patch.status, patch.timezone])
+          capacity=COALESCE($7,capacity), status=COALESCE($8,status), timezone=COALESCE($9,timezone),
+          minimum_points=COALESCE($10,minimum_points), updated_at=now() WHERE id=$1
+      `, [id, patch.title, patch.description, patch.location, patch.startsAt, patch.deadline,
+        patch.capacity, patch.status, patch.timezone, patch.minimumPoints])
       if (patch.status === 'published') {
         const { rows: [existingVersion] } = await client.query(
           'SELECT 1 FROM interview_versions WHERE event_id=$1 LIMIT 1', [id],
@@ -324,7 +329,7 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
   })
 
   app.post('/admin/applications/:id/attendance', async request => {
-    await auth.requireUser(request, 'staff')
+    const staff = await auth.requireUser(request, 'staff')
     const { id } = idParams.parse(request.params)
     return transaction(db, async client => {
       const { rows: [application] } = await client.query(`
@@ -339,7 +344,11 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
         SELECT id FROM activity_events WHERE user_id=$1 AND event_id=$2 AND type='attendance' LIMIT 1
       `, [application.user_id, application.event_id])
       if (!existing) {
-        await recordActivity(client, application.user_id, application.event_id, 'attendance', application.is_demo)
+        const activityId = await recordActivity(client, application.user_id, application.event_id, 'attendance', application.is_demo)
+        await client.query(`
+          INSERT INTO point_transactions (user_id,delta,reason,source_type,source_id,reviewer_id)
+          VALUES ($1,25,'Confirmed event attendance','attendance',$2,$3)
+        `, [application.user_id, activityId, staff.id])
       }
       return { recorded: true }
     })
@@ -368,6 +377,250 @@ export function registerStaffRoutes(app: FastifyInstance, db: Pool, auth: Auth) 
       ...counts,
       connectionRate: counts.callsAttempted ? counts.callsConnected / counts.callsAttempted : null,
       interviewCompletionRate: counts.callsConnected ? counts.interviewsCompleted / counts.callsConnected : null,
+    }
+  })
+
+  app.get('/admin/insights', async request => {
+    await auth.requireUser(request, 'staff')
+    return buildAdminInsights(db)
+  })
+}
+
+interface InsightsEventRow {
+  id: string
+  title: string
+  startsAt: Date | string
+  timezone: string
+  capacity: number
+}
+
+interface InsightsAppRow {
+  id: string
+  userId: string
+  eventId: string
+  interviewVersionId: string
+  status: string
+  interviewed: boolean
+  everInvited: boolean
+  attended: boolean
+  isDemo: boolean
+  interests: unknown[]
+  answers: Array<{ questionId: string; completeness: string }>
+}
+
+interface QuestionStat {
+  questionId: string
+  prompt: string
+  answered: number
+  partial: number
+  skipped: number
+  notAsked: number
+}
+
+function tallyEventInterests(apps: InsightsAppRow[]) {
+  const tally = new Map<string, { label: string; count: number }>()
+  for (const app of apps) {
+    const seen = new Set<string>()
+    for (const raw of Array.isArray(app.interests) ? app.interests : []) {
+      if (typeof raw !== 'string') continue
+      const label = raw.trim()
+      const key = label.toLowerCase()
+      if (!label || seen.has(key)) continue
+      seen.add(key)
+      const entry = tally.get(key) ?? { label, count: 0 }
+      entry.count += 1
+      tally.set(key, entry)
+    }
+  }
+  return [...tally.values()]
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, 8)
+}
+
+function tallyEventQuestions(
+  apps: InsightsAppRow[],
+  questionsByVersion: Map<string, Array<{ id: string; prompt: string }>>,
+): QuestionStat[] {
+  const stats = new Map<string, QuestionStat>()
+  for (const app of apps) {
+    if (!app.answers.length) continue
+    for (const question of questionsByVersion.get(app.interviewVersionId) ?? []) {
+      const stat = stats.get(question.id) ?? {
+        questionId: question.id,
+        prompt: question.prompt,
+        answered: 0,
+        partial: 0,
+        skipped: 0,
+        notAsked: 0,
+      }
+      const completeness = app.answers.find(answer => answer.questionId === question.id)?.completeness ?? 'not_asked'
+      if (completeness === 'answered') stat.answered += 1
+      else if (completeness === 'partial') stat.partial += 1
+      else if (completeness === 'skipped') stat.skipped += 1
+      else stat.notAsked += 1
+      stats.set(question.id, stat)
+    }
+  }
+  return [...stats.values()]
+}
+
+async function buildAdminInsights(db: Pool) {
+  return transaction(db, async client => {
+    await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
+    const { rows: eventRows } = await client.query<InsightsEventRow>(`
+      SELECT id, title, starts_at AS "startsAt", timezone, capacity
+      FROM events
+      ORDER BY starts_at DESC, id ASC
+    `)
+    const { rows: appRows } = await client.query<InsightsAppRow>(`
+      SELECT
+        a.id,
+        a.user_id AS "userId",
+        a.event_id AS "eventId",
+        a.interview_version_id AS "interviewVersionId",
+        a.status,
+        EXISTS (
+          SELECT 1 FROM call_attempts c
+          WHERE c.application_id = a.id AND c.status = 'completed'
+        ) AS interviewed,
+        EXISTS (
+          SELECT 1 FROM decisions d
+          WHERE d.application_id = a.id AND d.decision = 'invited'
+        ) AS "everInvited",
+        EXISTS (
+          SELECT 1 FROM activity_events ae
+          WHERE ae.user_id = a.user_id AND ae.event_id = a.event_id AND ae.type = 'attendance'
+        ) AS attended,
+        (
+          e.is_demo OR EXISTS (
+            SELECT 1 FROM activity_events ae
+            WHERE ae.user_id = a.user_id AND ae.event_id = a.event_id AND ae.is_demo
+          )
+        ) AS "isDemo",
+        COALESCE(CASE WHEN sel.processing_status = 'ready' THEN sel.interests END, '[]'::jsonb) AS interests,
+        COALESCE(CASE WHEN sel.processing_status = 'ready' THEN sel.answers END, '[]'::jsonb) AS answers
+      FROM applications a
+      JOIN events e ON e.id = a.event_id
+      LEFT JOIN LATERAL (
+        SELECT
+          c.id,
+          r.processing_status,
+          r.interests,
+          (
+            SELECT jsonb_agg(
+              jsonb_build_object('questionId', ans.question_id, 'completeness', ans.completeness)
+              ORDER BY q.position
+            )
+            FROM answers ans
+            JOIN questions q ON q.id = ans.question_id AND q.version_id = a.interview_version_id
+            WHERE ans.call_attempt_id = c.id
+          ) AS answers
+        FROM call_attempts c
+        LEFT JOIN interview_results r ON r.call_attempt_id = c.id
+        WHERE c.application_id = a.id
+          AND (
+            c.status = 'completed'
+            OR EXISTS (SELECT 1 FROM transcript_segments s WHERE s.call_attempt_id = c.id)
+          )
+        ORDER BY
+          (c.status = 'completed') DESC,
+          (r.processing_status = 'ready') DESC NULLS LAST,
+          c.created_at DESC,
+          c.id DESC
+        LIMIT 1
+      ) sel ON true
+    `)
+    const { rows: questionRows } = await client.query<{ versionId: string; id: string; prompt: string }>(`
+      SELECT version_id AS "versionId", id, prompt
+      FROM questions
+      ORDER BY version_id, position
+    `)
+
+    const questionsByVersion = new Map<string, Array<{ id: string; prompt: string }>>()
+    for (const row of questionRows) {
+      const list = questionsByVersion.get(row.versionId) ?? []
+      list.push({ id: row.id, prompt: row.prompt })
+      questionsByVersion.set(row.versionId, list)
+    }
+
+    const now = Date.now()
+    const toIso = (value: Date | string) => (value instanceof Date ? value.toISOString() : new Date(value).toISOString())
+    const startOf = new Map(eventRows.map(event => [event.id, new Date(event.startsAt).getTime()]))
+
+    const eventsByFan = new Map<string, Set<string>>()
+    for (const app of appRows) {
+      if (!startOf.has(app.eventId)) continue
+      const set = eventsByFan.get(app.userId) ?? new Set<string>()
+      set.add(app.eventId)
+      eventsByFan.set(app.userId, set)
+    }
+    const fanEventStarts = (userId: string) => [...(eventsByFan.get(userId) ?? [])].map(id => startOf.get(id)!)
+    const appliedBefore = (userId: string, start: number) => fanEventStarts(userId).some(s => s < start)
+    const appliedAfter = (userId: string, start: number) => fanEventStarts(userId).some(s => s > start)
+
+    const events = eventRows.map(event => {
+      const startsAt = toIso(event.startsAt)
+      const start = startOf.get(event.id)!
+      const past = start <= now
+      const apps = appRows.filter(app => app.eventId === event.id)
+      const isInvited = (app: InsightsAppRow) => app.everInvited || app.status === 'invited' || app.status === 'accepted'
+      const interviewed = apps.filter(app => app.interviewed)
+      const invited = apps.filter(isInvited)
+      const accepted = apps.filter(app => app.status === 'accepted')
+      const attended = apps.filter(app => app.attended)
+      const attendanceRecorded = past && attended.length > 0
+      const returningFans = apps.filter(app => appliedBefore(app.userId, start)).length
+
+      return {
+        event: { id: event.id, title: event.title, startsAt, timezone: event.timezone, capacity: event.capacity },
+        phase: past ? 'past' as const : 'upcoming' as const,
+        funnel: {
+          applied: apps.length,
+          interviewed: interviewed.length,
+          invited: invited.length,
+          accepted: accepted.length,
+          attended: past ? attended.length : null,
+        },
+        attendanceRecorded,
+        demand: { numerator: apps.length, denominator: event.capacity },
+        showUp: attendanceRecorded ? { numerator: attended.length, denominator: accepted.length } : null,
+        fill: attendanceRecorded ? { numerator: attended.length, denominator: event.capacity } : null,
+        audience: { newFans: apps.length - returningFans, returningFans },
+        dropOff: {
+          noInterview: apps.length - interviewed.length,
+          notInvited: interviewed.filter(app => !isInvited(app)).length,
+          invitedNotAccepted: invited.filter(app => app.status !== 'accepted').length,
+          acceptedNotAttended: attendanceRecorded ? accepted.filter(app => !app.attended).length : null,
+        },
+        interests: tallyEventInterests(apps),
+        questions: tallyEventQuestions(apps, questionsByVersion),
+      }
+    })
+
+    const cohorts = events
+      .filter(item => item.phase === 'past')
+      .filter(item => eventRows.some(other => startOf.get(other.id)! > startOf.get(item.event.id)!))
+      .map(item => {
+        const start = startOf.get(item.event.id)!
+        const attendees = appRows.filter(app => app.eventId === item.event.id && app.attended)
+        return {
+          eventId: item.event.id,
+          title: item.event.title,
+          startsAt: item.event.startsAt,
+          attendees: attendees.length,
+          cameBack: attendees.filter(app => appliedAfter(app.userId, start)).length,
+        }
+      })
+
+    return {
+      generatedAt: new Date(now).toISOString(),
+      includesDemoData: appRows.some(app => app.isDemo),
+      events,
+      retention: {
+        fans: eventsByFan.size,
+        repeatFans: [...eventsByFan.values()].filter(set => set.size >= 2).length,
+        cohorts,
+      },
     }
   })
 }

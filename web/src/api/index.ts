@@ -12,8 +12,10 @@ export type { DataSource } from './runtime-config'
  * The data source is chosen once, from configuration. There is no automatic
  * fallback: in live mode a failing API shows an error, never fixture data.
  */
-const runtime = runtimeConfig({ VITE_DATA_SOURCE: import.meta.env.VITE_DATA_SOURCE, VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL }, import.meta.env.DEV)
-export const dataSource = runtime.dataSource
+export const { dataSource, apiBaseUrl } = runtimeConfig({
+  VITE_DATA_SOURCE: import.meta.env.VITE_DATA_SOURCE,
+  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+}, import.meta.env.DEV)
 
 const FAILURE_KEY = 'faze-demo-simulated-failure'
 
@@ -33,5 +35,5 @@ export function resetFixtureData() {
 }
 
 export const api: ApiClient = dataSource === 'live'
-  ? createHttpClient(runtime.apiBaseUrl)
+  ? createHttpClient(apiBaseUrl)
   : createFixtureClient({ storage: localStorage, simulatedFailure: getSimulatedFailure })

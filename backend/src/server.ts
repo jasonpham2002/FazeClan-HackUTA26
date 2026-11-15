@@ -8,6 +8,9 @@ import { listenHost, loadConfig, type Config } from './config.ts'
 import { createPool } from './db.ts'
 import { ApiError, fail } from './errors.ts'
 import { registerInterviewRoutes } from './interviews.ts'
+import { registerPointRoutes } from './points.ts'
+import { registerPredictionRoutes } from './predictions.ts'
+import { registerRewardRoutes } from './rewards.ts'
 import { registerFanRoutes } from './fan.ts'
 import { registerStaffRoutes } from './staff.ts'
 import { registerPlayerRoutes } from './esports-data.ts'
@@ -21,7 +24,7 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
   app.register(cors, {
     origin: config.origins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
   app.addHook('onRequest', async (request, reply) => {
     reply.header('cache-control', 'no-store')
@@ -51,17 +54,19 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
     reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'This route does not exist.' } })
   })
   app.get('/health', async () => {
-    try {
-      await db.query('SELECT 1')
-    } catch {
-      fail(503, 'DATABASE_UNAVAILABLE', 'The database is unavailable.')
-    }
+    const { rows: [schema] } = await db.query<{ ready: boolean }>(
+      `SELECT to_regclass('point_transactions') IS NOT NULL AS ready`,
+    ).catch(() => fail(503, 'DATABASE_UNAVAILABLE', 'The database is unavailable.'))
+    if (!schema.ready) fail(503, 'SCHEMA_NOT_READY', 'Run the backend migrations before using this API.')
     return { status: 'ok' }
   })
   const auth = registerAuth(app, db, config, sendMail)
   registerPlayerRoutes(app, db)
   registerFanRoutes(app, db, auth)
   registerStaffRoutes(app, db, auth)
+  registerPredictionRoutes(app, db, auth)
+  registerPointRoutes(app, db, auth)
+  registerRewardRoutes(app, db, auth)
   registerInterviewRoutes(app, db, config.agentToken)
   return app
 }
