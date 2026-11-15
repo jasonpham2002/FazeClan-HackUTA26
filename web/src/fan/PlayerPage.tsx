@@ -13,9 +13,23 @@ import {
   formatDate, formatStat, isUnverified, PickStateBadge, PREVIEW_LABEL, pickState, PlayerPortrait, RosterBadge, SampleBadge, statLabels, useFan,
 } from './fazeid-ui'
 import { eventUnavailable } from './logic'
+import { SeasonChart } from './SeasonChart'
 import { useReveal } from './useReveal'
 
-const STAT_KEYS: StatKey[] = ['rating', 'kd', 'adr', 'headshotPercent']
+const SHOWN_STATS = ['rating', 'adr'] as const
+const STAT_SCALE = { rating: 3, adr: 100 } as const
+
+function StatMeter({ value, max }: { value: number | null; max: number }) {
+  const segments = 20
+  const filled = value === null ? 0 : Math.round(Math.min(1, Math.max(0, value / max)) * segments)
+  return (
+    <span className="mt-3 flex h-2 gap-1" aria-hidden="true">
+      {Array.from({ length: segments }, (_, index) => (
+        <span key={index} className={`h-full flex-1 rounded-sm ${index < filled ? 'bg-accent' : 'bg-border'}`} />
+      ))}
+    </span>
+  )
+}
 
 // ---------- Player switcher ----------
 
@@ -145,31 +159,32 @@ function Section({ title, meta, actions, children }: { title: ReactNode; meta?: 
 
 function StatRail({ stats, metric, onSelect }: { stats: PlayerStats; metric: StatKey; onSelect: (key: StatKey) => void }) {
   return (
-    <div role="group" aria-label="Statistics for this period" className="grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-surface sm:grid-cols-4">
-      {STAT_KEYS.map((key, index) => {
+    <div role="group" aria-label="Statistics for this period" className="grid gap-3 sm:grid-cols-2">
+      {SHOWN_STATS.map(key => {
         const { value, definition } = stats.metrics[key]
         const selected = key === metric
         const counted = observations(stats.recentMatches, key).length
+        const scale = STAT_SCALE[key]
         return (
           <button
             key={key}
             type="button"
             aria-pressed={selected}
             onClick={() => onSelect(key)}
-            className={`relative flex flex-col items-start gap-1.5 px-4 py-4 text-left transition-colors duration-150 hover:bg-surface-2 focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-text ${
-              index % 2 ? 'border-l border-border' : 'sm:border-l sm:border-border sm:first:border-l-0'
-            } ${index > 1 ? 'border-t border-border sm:border-t-0' : ''} ${selected ? 'bg-surface-2' : ''}`}
+            className={`relative flex min-h-28 flex-col items-start rounded-xl border border-border px-5 py-4 text-left transition-colors duration-150 hover:bg-surface-2 focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-text ${
+              selected ? 'bg-surface-2' : 'bg-surface'
+            }`}
           >
             <span className="text-sm font-semibold text-muted">{statLabels[key]}</span>
-            <span className={`figure text-4xl whitespace-nowrap tabular-nums 2xl:text-5xl ${value === null ? 'text-subtle' : ''}`}>
-              {formatStat(key, value).replace('%', '')}
-              {key === 'headshotPercent' && value !== null && <span className="ml-0.5 text-2xl text-muted">%</span>}
+            <span className={`figure mt-1 text-4xl whitespace-nowrap tabular-nums ${value === null ? 'text-subtle' : ''}`}>
+              {formatStat(key, value)}
             </span>
-            <span className="text-xs text-subtle">
-              {value === null ? 'Unavailable' : counted ? `Across ${counted} ${counted === 1 ? 'match' : 'matches'}` : 'Period total'}
+            <StatMeter value={value} max={scale} />
+            <span className="mt-1.5 text-xs text-subtle">
+              {value === null ? 'Unavailable from the source' : `of ${scale}${counted ? ` · ${counted} ${counted === 1 ? 'match' : 'matches'}` : ''}`}
             </span>
             {definition && <span className="text-xs text-subtle">{definition.replace(/hltv/ig, '').replace(/\s+/g, ' ').trim()}</span>}
-            <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 transition-colors duration-150 ${selected ? 'bg-accent' : 'bg-transparent'}`} />
+            <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 rounded-b-xl transition-colors duration-150 ${selected ? 'bg-accent' : 'bg-transparent'}`} />
           </button>
         )
       })}
@@ -260,8 +275,8 @@ function MatchDetail({ line, standout, metric }: { line: MatchStatLine; standout
         {line.result && ` · ${line.result === 'win' ? 'Won' : 'Lost'}${line.score ? ` ${line.score}` : ''}`}
         {line.mapsPlayed !== null && ` · ${line.mapsPlayed} ${line.mapsPlayed === 1 ? 'map' : 'maps'}`}
       </p>
-      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-        {STAT_KEYS.map(key => (
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+        {SHOWN_STATS.map(key => (
           <div key={key}>
             <dt className="text-xs font-semibold text-muted">{statLabels[key]}</dt>
             <dd className={`figure mt-1 text-2xl tabular-nums ${line[key] === null ? 'text-subtle' : ''}`}>{formatStat(key, line[key])}</dd>
@@ -347,7 +362,7 @@ function Analytics({ player }: { player: Player }) {
     return (
       <Section title="Performance">
         <EmptyState title="Coaches have no player statistics">
-          Rating, K/D, ADR and headshot percentage describe players in the server. Team matches and tournament progress are below.
+          Rating and ADR describe players in the server. Team matches and tournament progress are below.
         </EmptyState>
       </Section>
     )
@@ -375,10 +390,14 @@ function Analytics({ player }: { player: Player }) {
       meta={`${data.period.label.replace(/hltv/ig, '').replace(/\s+/g, ' ').trim()}${data.period.start && data.period.end ? ` · ${formatDate(data.period.start)} to ${formatDate(data.period.end)}` : ''}${data.mapsPlayed !== null ? ` · ${data.mapsPlayed} maps` : ''}`}
       actions={data.isDemo ? <SampleBadge label="Demo numbers — not real statistics" /> : undefined}
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
           <StatRail stats={data} metric={metric} onSelect={setMetric} />
-          <PerformanceChart key={metric} lines={lines} metric={metric} selectedId={selected?.matchId ?? null} onSelect={setPicked} />
+          {canChart(lines, metric) ? (
+            <PerformanceChart key={metric} lines={lines} metric={metric} selectedId={selected?.matchId ?? null} onSelect={setPicked} />
+          ) : (
+            <SeasonChart playerId={player.id} />
+          )}
           {sorted.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-muted">Recent matches</h3>

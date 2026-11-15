@@ -1,0 +1,60 @@
+{
+  "collectedAt": "2026-11-15T15:45:00Z",
+  "metric": "Rating 1.0",
+  "players": {
+    "hltv-9960": [
+      {"label": "2015", "kind": "year", "rating": 1.08, "maps": 20, "online": {"rating": 1.00, "maps": 12}, "lan": {"rating": 1.20, "maps": 8}, "majors": null},
+      {"label": "2016", "kind": "year", "rating": 1.15, "maps": 68, "online": {"rating": 1.08, "maps": 37}, "lan": {"rating": 1.23, "maps": 31}, "majors": null},
+      {"label": "2017", "kind": "year", "rating": 1.22, "maps": 281, "online": {"rating": 1.21, "maps": 244}, "lan": {"rating": 1.27, "maps": 37}, "majors": null},
+      {"label": "2018", "kind": "year", "rating": 1.12, "maps": 138, "online": {"rating": 1.10, "maps": 101}, "lan": {"rating": 1.16, "maps": 37}, "majors": null},
+      {"label": "2019", "kind": "year", "rating": 1.11, "maps": 276, "online": {"rating": 1.15, "maps": 126}, "lan": {"rating": 1.09, "maps": 150}, "majors": {"rating": 0.97, "maps": 12}},
+      {"label": "2020", "kind": "year", "rating": 1.04, "maps": 174, "online": {"rating": 1.03, "maps": 153}, "lan": {"rating": 1.14, "maps": 21}, "majors": null},
+      {"label": "2021", "kind": "year", "rating": 1.10, "maps": 153, "online": {"rating": 1.11, "maps": 118}, "lan": {"rating": 1.06, "maps": 35}, "majors": {"rating": 1.12, "maps": 16}},
+      {"label": "2022", "kind": "year", "rating": 1.11, "maps": 159, "online": {"rating": 1.19, "maps": 47}, "lan": {"rating": 1.08, "maps": 112}, "majors": {"rating": 1.13, "maps": 19}},
+      {"label": "2023", "kind": "year", "rating": 1.14, "maps": 144, "online": {"rating": 1.21, "maps": 30}, "lan": {"rating": 1.13, "maps": 114}, "majors": {"rating": 1.18, "maps": 4}},
+      {"label": "2024", "kind": "year", "rating": 1.07, "maps": 190, "online": {"rating": 1.16, "maps": 8}, "lan": {"rating": 1.07, "maps": 182}, "majors": {"rating": 1.04, "maps": 33}},
+      {"label": "2025", "kind": "year", "rating": 1.09, "maps": 195, "online": {"rating": 1.05, "maps": 18}, "lan": {"rating": 1.09, "maps": 177}, "majors": {"rating": 1.12, "maps": 44}},
+      {"label": "2026", "kind": "year", "rating": 1.06, "maps": 166, "online": {"rating": 1.08, "maps": 21}, "lan": {"rating": 1.05, "maps": 145}, "majors": null},
+      {"label": "Past 3 months", "kind": "recent", "rating": 1.00, "maps": 54, "online": {"rating": 1.01, "maps": 3}, "lan": {"rating": 1.00, "maps": 51}, "majors": null}
+    ],
+    "hltv-10394": [
+      {"label": "2015", "kind": "year", "rating": 1.25, "maps": 4, "online": {"rating": 1.25, "maps": 4}, "lan": null, "majors": null},
+      {"label": "2016", "kind": "year", "rating": 1.10, "maps": 171, "online": {"rating": 1.13, "maps": 130}, "lan": {"rating": 1.00, "maps": 41}, "majors": null},
+      {"label": "2017", "kind": "year", "rating": 1.17, "maps": 273, "online": {"rating": 1.21, "maps": 161}, "lan": {"rating": 1.12, "maps": 112}, "majors": null},
+      {"label": "2018", "kind": "year", "rating": 1.14, "maps": 285, "online": {"rating": 1.19, "maps": 96}, "lan": {"rating": 1.11, "maps": 189}, "majors": {"rating": 1.18, "maps": 21}},
+      {"label": "2019", "kind": "year", "rating": 1.11, "maps": 223, "online": {"rating": 1.07, "maps": 40}, "lan": {"rating": 1.12, "maps": 183}, "majors": {"rating": 1.07, "maps": 15}},
+      {"label": "2020", "kind": "year", "rating": 1.03, "maps": 177, "online": {"rating": 1.02, "maps": 160}, "lan": {"rating": 1.07, "maps": 17}, "majors": null},
+      {"label": "2021", "kind": "year", "rating": 1.11, "maps": 145, "online": {"rating": 1.09, "maps": 92}, "lan": {"rating": 1.13, "maps": 53}, "majors": {"rating": 1.16, "maps": 12}},
+      {"label": "2022", "kind": "year", "rating": 1.08, "maps": 170, "online": {"rating": 1.08, "maps": 24}, "lan": {"rating": 1.07, "maps": 146}, "majors": {"rating": 1.04, "maps": 18}},
+      {"label": "2023", "kind": "year", "rating": 1.05, "maps": 168, "online": {"rating": 1.15, "maps": 12}, "lan": {"rating": 1.04, "maps": 156}, "majors": {"rating": 0.93, "maps": 20}},
+      {"label": "2024", "kind": "year", "rating": 1.11, "maps": 191, "online": {"rating": 1.17, "maps": 72}, "lan": {"rating": 1.08, "maps": 119}, "majors": {"rating": 1.04, "maps": 13}},
+      {"label": "2025", "kind": "year", "rating": 1.08, "maps": 182, "online": {"rating": 1.01, "maps": 23}, "lan": {"rating": 1.09, "maps": 159}, "majors": {"rating": 1.06, "maps": 34}},
+      {"label": "2026", "kind": "year", "rating": 1.04, "maps": 166, "online": {"rating": 0.96, "maps": 21}, "lan": {"rating": 1.05, "maps": 145}, "majors": null},
+      {"label": "Past 3 months", "kind": "recent", "rating": 1.05, "maps": 54, "online": {"rating": 0.97, "maps": 3}, "lan": {"rating": 1.06, "maps": 51}, "majors": null}
+    ],
+    "hltv-21972": [
+      {"label": "2022", "kind": "year", "rating": 0.86, "maps": 19, "online": {"rating": 0.86, "maps": 19}, "lan": null, "majors": null},
+      {"label": "2023", "kind": "year", "rating": 0.92, "maps": 104, "online": {"rating": 0.92, "maps": 100}, "lan": {"rating": 1.01, "maps": 4}, "majors": null},
+      {"label": "2024", "kind": "year", "rating": 1.03, "maps": 310, "online": {"rating": 1.03, "maps": 295}, "lan": {"rating": 0.99, "maps": 15}, "majors": null},
+      {"label": "2025", "kind": "year", "rating": 1.00, "maps": 310, "online": {"rating": 0.99, "maps": 242}, "lan": {"rating": 1.00, "maps": 68}, "majors": null},
+      {"label": "2026", "kind": "year", "rating": 0.92, "maps": 152, "online": {"rating": 1.00, "maps": 35}, "lan": {"rating": 0.89, "maps": 117}, "majors": null},
+      {"label": "Past 3 months", "kind": "recent", "rating": 0.87, "maps": 54, "online": {"rating": 0.77, "maps": 3}, "lan": {"rating": 0.88, "maps": 51}, "majors": null}
+    ],
+    "hltv-22383": [
+      {"label": "2022", "kind": "year", "rating": 1.02, "maps": 2, "online": {"rating": 1.02, "maps": 2}, "lan": null, "majors": null},
+      {"label": "2023", "kind": "year", "rating": 0.94, "maps": 25, "online": {"rating": 0.94, "maps": 25}, "lan": null, "majors": null},
+      {"label": "2024", "kind": "year", "rating": 1.12, "maps": 47, "online": {"rating": 1.12, "maps": 47}, "lan": null, "majors": null},
+      {"label": "2025", "kind": "year", "rating": 1.01, "maps": 225, "online": {"rating": 1.03, "maps": 150}, "lan": {"rating": 0.97, "maps": 75}, "majors": {"rating": 0.98, "maps": 29}},
+      {"label": "2026", "kind": "year", "rating": 0.95, "maps": 165, "online": {"rating": 0.92, "maps": 20}, "lan": {"rating": 0.95, "maps": 145}, "majors": null},
+      {"label": "Past 3 months", "kind": "recent", "rating": 0.96, "maps": 53, "online": {"rating": 0.80, "maps": 2}, "lan": {"rating": 0.96, "maps": 51}, "majors": null}
+    ],
+    "hltv-22866": [
+      {"label": "2022", "kind": "year", "rating": 1.03, "maps": 2, "online": {"rating": 1.03, "maps": 2}, "lan": null, "majors": null},
+      {"label": "2023", "kind": "year", "rating": 0.96, "maps": 66, "online": {"rating": 0.99, "maps": 45}, "lan": {"rating": 0.90, "maps": 21}, "majors": null},
+      {"label": "2024", "kind": "year", "rating": 0.96, "maps": 99, "online": {"rating": 0.96, "maps": 89}, "lan": {"rating": 1.00, "maps": 10}, "majors": null},
+      {"label": "2025", "kind": "year", "rating": 1.14, "maps": 130, "online": {"rating": 1.12, "maps": 102}, "lan": {"rating": 1.20, "maps": 28}, "majors": null},
+      {"label": "2026", "kind": "year", "rating": 1.16, "maps": 177, "online": {"rating": 1.19, "maps": 87}, "lan": {"rating": 1.12, "maps": 90}, "majors": null},
+      {"label": "Past 3 months", "kind": "recent", "rating": 1.07, "maps": 54, "online": {"rating": 1.23, "maps": 3}, "lan": {"rating": 1.06, "maps": 51}, "majors": null}
+    ]
+  }
+}

@@ -252,6 +252,9 @@ export function createHttpClient(baseUrl: string): ApiClient {
     redeemPrediction: async marketId => {
       await request('POST', `/predictions/markets/${enc(marketId)}/redeem`)
     },
+    resetPredictionDemo: async marketId => {
+      await request('POST', `/predictions/markets/${enc(marketId)}/reset-demo`)
+    },
     getMyPoints: () => request('GET', '/me/points'),
     listRewards: async () => list(await request('GET', '/rewards'), 'rewards'),
     redeemReward: async (rewardId, idempotencyKey) => {
@@ -265,6 +268,7 @@ export function createHttpClient(baseUrl: string): ApiClient {
     },
     listAdminRewards: async () => list(await request('GET', '/admin/rewards'), 'rewards'),
     createReward: async input => { await request('POST', '/admin/rewards', input) },
+    uploadRewardImage: input => request('POST', '/admin/rewards/images', input),
     updateReward: async (id, input) => { await request('PATCH', `/admin/rewards/${enc(id)}`, input) },
     listAdminRedemptions: async () => list(await request('GET', '/admin/redemptions'), 'redemptions'),
     getFanPoints: id => request('GET', `/admin/users/${enc(id)}/points`),

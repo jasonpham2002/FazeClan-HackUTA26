@@ -209,6 +209,46 @@ export function registerPredictionRoutes(app: FastifyInstance, db: Pool, auth: A
     })
   })
 
+  app.post('/predictions/markets/:id/reset-demo', async request => {
+    const fan = await auth.requireUser(request, 'fan')
+    const { id } = idParams.parse(request.params)
+    await ensureHistoryPredictions(db, fan.id)
+    return transaction(db, async client => {
+      await lockFan(client, fan.id)
+      const { rows: [market] } = await client.query<{ referenceId: string }>(`
+        SELECT reference_id AS "referenceId" FROM prediction_markets WHERE id = $1 FOR UPDATE
+      `, [id])
+      if (!market) fail(404, 'MARKET_NOT_FOUND', 'Prediction market not found.')
+      if (market.referenceId !== CLAIMABLE_MATCH_ID) {
+        fail(409, 'PREDICTION_NOT_CLAIMABLE', 'Only the 3 November match can be reset for the demo.')
+      }
+      const claims = await client.query<{ id: string; rewardId: string; pointTransactionId: string }>(`
+        SELECT id, reward_id AS "rewardId", point_transaction_id AS "pointTransactionId"
+        FROM reward_redemptions WHERE user_id = $1 FOR UPDATE
+      `, [fan.id])
+      const stockBack = new Map<string, number>()
+      for (const claim of claims.rows) stockBack.set(claim.rewardId, (stockBack.get(claim.rewardId) ?? 0) + 1)
+      if (stockBack.size) {
+        await client.query('SELECT id FROM rewards WHERE id = ANY($1::uuid[]) FOR UPDATE', [[...stockBack.keys()]])
+        for (const [rewardId, count] of stockBack) {
+          await client.query('UPDATE rewards SET stock = stock + $2 WHERE id = $1 AND stock IS NOT NULL', [rewardId, count])
+        }
+        await client.query('DELETE FROM reward_redemptions WHERE user_id = $1 AND id = ANY($2::uuid[])', [fan.id, claims.rows.map(claim => claim.id)])
+        await client.query('DELETE FROM point_transactions WHERE user_id = $1 AND id = ANY($2::uuid[])', [fan.id, claims.rows.map(claim => claim.pointTransactionId)])
+      }
+      const removed = await client.query<{ delta: number }>(`
+        DELETE FROM point_transactions
+        WHERE user_id = $1 AND source_type = 'prediction' AND source_id = $2
+        RETURNING delta
+      `, [fan.id, id])
+      return {
+        rewardsRestored: claims.rowCount ?? 0,
+        removed: removed.rowCount ? removed.rows[0].delta : 0,
+        balance: await pointBalance(client, fan.id),
+      }
+    })
+  })
+
   app.post('/predictions/markets/:id/pick', async (request, reply) => {
     const fan = await auth.requireUser(request, 'fan')
     const { id } = idParams.parse(request.params)

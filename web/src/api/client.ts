@@ -121,6 +121,8 @@ export interface ApiClient {
   submitPick(marketId: string, optionId: string): Promise<void>
   /** POST /predictions/markets/:id/redeem — credits a winning pick that is still claimable. */
   redeemPrediction(marketId: string): Promise<void>
+  /** POST /predictions/markets/:id/reset-demo — removes this fan's Nov 3 claim so Redeem shows again. */
+  resetPredictionDemo(marketId: string): Promise<void>
   /** CONFIRM (Jason): GET /me/points */
   getMyPoints(): Promise<PointsSummary>
   /** CONFIRM (Jason): GET /rewards */
@@ -139,6 +141,8 @@ export interface ApiClient {
   listAdminRewards(): Promise<Reward[]>
   /** CONFIRM (Jason): POST /admin/rewards */
   createReward(input: RewardInput): Promise<void>
+  /** POST /admin/rewards/images — stores a staff-uploaded gift photo. */
+  uploadRewardImage(input: { contentType: string; dataBase64: string }): Promise<{ imageUrl: string }>
   /** CONFIRM (Jason): PATCH /admin/rewards/:id */
   updateReward(id: string, input: RewardInput): Promise<void>
   /** CONFIRM (Jason): GET /admin/redemptions — not in the proposed endpoint list. */

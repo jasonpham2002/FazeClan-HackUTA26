@@ -5,7 +5,7 @@ import { api, ApiError } from '../api'
 import type { EsportsMatch, PredictionMarket } from '../api/types'
 import { Badge, Button, EmptyState, ErrorState, linkButtonClass, linkClass, LoadingState, Notice, Section } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
-import { pageTitle, PickStateBadge, pickState, SampleBadge, useFan } from './fazeid-ui'
+import { CLAIMABLE_MATCH_ID, pageTitle, PickStateBadge, pickState, SampleBadge, useFan } from './fazeid-ui'
 
 function RedeemPoints({ market }: { market: PredictionMarket }) {
   const queries = useQueryClient()
@@ -25,6 +25,32 @@ function RedeemPoints({ market }: { market: PredictionMarket }) {
       {redeem.isError && (
         <Notice tone="danger">
           Not redeemed. {redeem.error instanceof ApiError ? redeem.error.message : 'Try again.'} No points were added.
+        </Notice>
+      )}
+    </div>
+  )
+}
+
+function ResetDemo({ market }: { market: PredictionMarket }) {
+  const queries = useQueryClient()
+  const reset = useMutation({
+    mutationFn: () => api.resetPredictionDemo(market.id),
+    onSuccess: () => {
+      queries.invalidateQueries({ queryKey: ['markets'] })
+      queries.invalidateQueries({ queryKey: ['rewards'] })
+      queries.invalidateQueries({ queryKey: ['fan', 'points'] })
+      queries.invalidateQueries({ queryKey: ['fan', 'redemptions'] })
+    },
+  })
+  return (
+    <div className="mt-3 space-y-2">
+      <Button type="button" disabled={reset.isPending} onClick={() => reset.mutate()}>
+        {reset.isPending ? 'Resetting…' : 'Reset demo'}
+      </Button>
+      <p className="text-sm text-muted">Puts the demo back to the start. Reward stock goes back up, this account’s reward claims are cleared, and the 3 November points can be redeemed again.</p>
+      {reset.isError && (
+        <Notice tone="danger">
+          Not reset. {reset.error instanceof ApiError ? reset.error.message : 'Try again.'}
         </Notice>
       )}
     </div>
@@ -124,11 +150,14 @@ export function MarketCard({ market }: { market: PredictionMarket }) {
       {state === 'submitted' && <p className="mt-2 text-sm text-muted">Saved {formatDateTime(market.myPick!.submittedAt)}. Locks {formatDateTime(market.locksAt)}.</p>}
       {state === 'locked' && <p className="mt-2 text-sm text-muted">Picks closed {formatDateTime(market.locksAt)}. Staff confirm the result before any points are awarded.</p>}
       {state === 'redeemed' && (
-        <p className="mt-2 text-sm text-ok">
-          {market.redeemed
-            ? <>Redeemed. {market.award} points are on <Link to="/profile" className={linkClass}>My FaZe ID</Link>.</>
-            : 'Redeemed.'}
-        </p>
+        <div className="mt-2">
+          <p className="text-sm text-ok">
+            {market.redeemed
+              ? <>Redeemed. {market.award} points are on <Link to="/profile" className={linkClass}>My FaZe ID</Link>.</>
+              : 'Redeemed.'}
+          </p>
+          {fan && market.matchId === CLAIMABLE_MATCH_ID && market.redeemed && <ResetDemo market={market} />}
+        </div>
       )}
       {state === 'incorrect' && <p className="mt-2 text-sm text-danger">Lost. This pick did not earn points.</p>}
       {state === 'claimable' && fan && <RedeemPoints market={market} />}

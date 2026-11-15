@@ -569,6 +569,10 @@ export type RewardKind = 'merch' | 'raffle' | 'early_access' | 'priority'
 
 export interface RewardInput {
   title: string
+  /** Short line shown above the gift name. Empty uses the title. */
+  headline?: string
+  /** https link or an uploaded /rewards/images path. */
+  imageUrl?: string | null
   description: string
   kind: RewardKind
   cost: number

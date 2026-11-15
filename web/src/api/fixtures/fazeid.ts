@@ -134,9 +134,9 @@ interface Context {
 
 type FazeIdMethods = Pick<ApiClient,
   'listPlayers' | 'getPlayer' | 'getPlayerStats' | 'getPlayerSchedule' | 'listMatches' | 'getPlayerHighlights' |
-  'getPlayerInsight' | 'listFollows' | 'setFollow' | 'listMarkets' | 'submitPick' | 'redeemPrediction' | 'getMyPoints' | 'listRewards' |
+  'getPlayerInsight' | 'listFollows' | 'setFollow' | 'listMarkets' | 'submitPick' | 'redeemPrediction' | 'resetPredictionDemo' | 'getMyPoints' | 'listRewards' |
   'redeemReward' | 'listMyRedemptions' | 'listAdminMarkets' | 'createMarket' | 'settleMarket' | 'listAdminRewards' |
-  'createReward' | 'updateReward' | 'listAdminRedemptions' | 'getFanPoints' | 'adjustFanPoints'>
+  'createReward' | 'uploadRewardImage' | 'updateReward' | 'listAdminRedemptions' | 'getFanPoints' | 'adjustFanPoints'>
 
 export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
   const fan = <T>(kind: 'read' | 'write', run: (db: Db) => T) => call(kind, run, 'fan')
@@ -147,13 +147,14 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
   const playerOf = (id: string) => [...rosterPlayers, ...samplePlayers].find(player => player.id === id) ?? notFound('Player')
   const marketOf = (db: Db, id: string) => stateOf(db).markets.find(market => market.id === id) ?? notFound('Prediction market')
 
-  function publicMarket(market: StoredMarket, userId: string | null): PredictionMarket {
+  function publicMarket(market: StoredMarket, userId: string | null, db: Db): PredictionMarket {
     const { picks, voided: _voided, ...rest } = market
     const mine = userId ? picks.find(pick => pick.userId === userId) : undefined
     return {
       ...rest,
       state: marketState(market, now().getTime()),
       myPick: mine ? { optionId: mine.optionId, submittedAt: mine.submittedAt } : null,
+      redeemed: Boolean(userId && stateOf(db).ledger.some(row => row.userId === userId && row.key === `prediction:${market.id}`)),
     }
   }
 
@@ -169,7 +170,9 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
     if (!input.title.trim()) invalid('A reward needs a title.')
     if (!Number.isInteger(input.cost) || input.cost <= 0) invalid('Cost must be a positive whole number of points.')
     if (input.stock !== null && (!Number.isInteger(input.stock) || input.stock < 0)) invalid('Stock must be zero or more, or left empty.')
-    return { ...input, title: input.title.trim(), description: input.description.trim(), terms: input.terms.trim() }
+    const headline = (input.headline ?? '').trim()
+    const imageUrl = input.imageUrl?.trim() || null
+    return { ...input, title: input.title.trim(), headline, imageUrl, description: input.description.trim(), terms: input.terms.trim() }
   }
 
   const people = (db: Db) => [db.fan, ...db.otherFans, ...db.applications.map(app => app.applicant)]
@@ -211,7 +214,7 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
 
     // Public list; a signed-in fan also sees their own pick.
     listMarkets: () => call('read', db =>
-      stateOf(db).markets.map(market => publicMarket(market, db.signedOut?.fan ? null : db.fan.id))),
+      stateOf(db).markets.map(market => publicMarket(market, db.signedOut?.fan ? null : db.fan.id, db))),
     submitPick: (marketId, optionId) => fan('write', db => {
       const market = marketOf(db, marketId)
       const state = marketState(market, now().getTime())
@@ -230,6 +233,21 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
         throw new ApiError(409, 'NOT_A_WINNER', 'Only the winning pick can be redeemed.')
       }
       addPoints(db, db.fan.id, `prediction:${market.id}`, market.award, `Redeemed prediction: ${market.title}`, 'prediction', now().toISOString())
+    }),
+    resetPredictionDemo: marketId => fan('write', db => {
+      const market = marketOf(db, marketId)
+      if (market.matchId !== 'hltv-match-2399994') {
+        throw new ApiError(409, 'PREDICTION_NOT_CLAIMABLE', 'Only the 3 November match can be reset for the demo.')
+      }
+      const state = stateOf(db)
+      const mine = state.redemptions.filter(item => item.userId === db.fan.id)
+      for (const claim of mine) {
+        const reward = state.rewards.find(item => item.id === claim.rewardId)
+        if (reward && reward.stock !== null) reward.stock += 1
+      }
+      const claimIds = new Set(mine.map(claim => `redemption:${claim.id}`))
+      state.redemptions = state.redemptions.filter(item => item.userId !== db.fan.id)
+      state.ledger = state.ledger.filter(row => !(row.userId === db.fan.id && (row.key === `prediction:${market.id}` || claimIds.has(row.key))))
     }),
 
     getMyPoints: () => fan('read', db => summary(db, db.fan.id)),
@@ -261,7 +279,7 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
         .map(({ userId: _user, key: _key, ...item }) => item)),
 
     listAdminMarkets: () => staff('read', db => stateOf(db).markets.map((market): AdminMarket => ({
-      ...publicMarket(market, null),
+      ...publicMarket(market, null, db),
       pickCount: market.picks.length,
       picksByOption: Object.fromEntries(market.options.map(item =>
         [item.id, market.picks.filter(pick => pick.optionId === item.id).length])),
@@ -297,6 +315,10 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
     }),
 
     listAdminRewards: () => staff('read', db => stateOf(db).rewards),
+    uploadRewardImage: input => staff('write', () => {
+      if (!input.dataBase64.trim()) invalid('Choose an image.')
+      return { imageUrl: `data:${input.contentType || 'image/png'};base64,${input.dataBase64}` }
+    }),
     createReward: input => staff('write', db => {
       stateOf(db).rewards.push({ ...cleanReward(input), id: `rwd_${crypto.randomUUID()}`, isDemo: true })
     }),
