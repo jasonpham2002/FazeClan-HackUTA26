@@ -4,6 +4,7 @@ import { z } from 'zod'
 import type { Auth } from './auth.ts'
 import { transaction } from './db.ts'
 import { fail } from './errors.ts'
+import { lockFan, pointBalance } from './points.ts'
 import { applicationColumns, consentVersion, eventColumns, getActivity, getApplication, getEvent, idParams, recordActivity } from './views.ts'
 
 const profileBody = z.strictObject({
@@ -77,13 +78,19 @@ export function registerFanRoutes(app: FastifyInstance, db: Pool, auth: Auth) {
     const consent = applyBody.parse(request.body)
     const result = await transaction(db, async client => {
       const { rows: [event] } = await client.query(`
-        SELECT status, deadline > now() AND starts_at > now() AS open, is_demo
+        SELECT status, deadline > now() AND starts_at > now() AS open, is_demo, minimum_points
         FROM events WHERE id=$1 FOR UPDATE
       `, [id])
       const { rows: [existing] } = await client.query('SELECT id FROM applications WHERE user_id=$1 AND event_id=$2', [user.id, id])
       if (existing) return { id: existing.id, created: false }
       if (!event || event.status !== 'published') fail(404, 'EVENT_NOT_FOUND', 'Event not found.')
       if (!event.open) fail(409, 'APPLICATIONS_CLOSED', 'Applications for this event are closed.')
+      if (event.minimum_points > 0) {
+        await lockFan(client, user.id)
+        if (await pointBalance(client, user.id) < event.minimum_points) {
+          fail(409, 'INSUFFICIENT_EVENT_POINTS', `You need at least ${event.minimum_points} points to apply.`)
+        }
+      }
       const { rows: [version] } = await client.query(
         'SELECT id FROM interview_versions WHERE event_id=$1 ORDER BY version DESC LIMIT 1', [id],
       )

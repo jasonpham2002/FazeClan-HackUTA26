@@ -3,6 +3,7 @@ import { createPool, transaction } from "./db.ts";
 
 export const demoEventId = "f0000000-0000-4000-8000-000000000001";
 export const demoVersionId = "f0000000-0000-4000-8000-000000000002";
+export const demoRewardId = "f0000000-0000-4000-8000-000000000005";
 
 const demoUsers = [
   { id: "demo-fan", email: "fan@example.test", name: "Demo Fan", role: "fan" },
@@ -68,6 +69,31 @@ export async function seed(db: Pool): Promise<void> {
         VALUES ($1, $2, 'application_submitted', 'fixture', $3, true), ($1, $2, $4, 'fixture', $3, true)`,
       [userId, demoEventId, JSON.stringify({ applicationId }), decision]);
     }
+
+    const { rows: [rewardsTable] } = await client.query<{ ready: boolean }>(
+      "SELECT to_regclass('rewards') IS NOT NULL AS ready",
+    );
+    if (rewardsTable.ready) {
+      const { rows: [descCol] } = await client.query<{ has_desc: boolean }>(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema() AND table_name = 'rewards' AND column_name = 'description'
+        ) AS has_desc
+      `);
+      if (descCol.has_desc) {
+        await client.query(`
+          INSERT INTO rewards (id, title, description, kind, terms, point_cost, stock, active, is_demo)
+          VALUES ($1, 'Sample FaZe merch', 'Proposed merchandise benefit for the demo.', 'merchandise', 'Proposed demo benefit', 50, 10, true, true)
+          ON CONFLICT (id) DO NOTHING
+        `, [demoRewardId]);
+      } else {
+        await client.query(`
+          INSERT INTO rewards (id, title, kind, terms, point_cost, stock, active, is_demo)
+          VALUES ($1, 'Sample FaZe merch', 'merchandise', 'Proposed demo benefit', 50, 10, true, true)
+          ON CONFLICT (id) DO NOTHING
+        `, [demoRewardId]);
+      }
+    }
   });
 }
 
@@ -82,6 +108,13 @@ export async function cleanupDemo(db: Pool): Promise<void> {
     await client.query(`DELETE FROM events WHERE id = $1 AND is_demo
       AND NOT EXISTS (SELECT 1 FROM applications WHERE event_id = $1)
       AND NOT EXISTS (SELECT 1 FROM activity_events WHERE event_id = $1)`, [demoEventId]);
+    const { rows: [rewardsTable] } = await client.query<{ ready: boolean }>(
+      "SELECT to_regclass('rewards') IS NOT NULL AS ready",
+    );
+    if (rewardsTable.ready) {
+      await client.query(`DELETE FROM rewards WHERE id = $1 AND is_demo
+        AND NOT EXISTS (SELECT 1 FROM reward_redemptions WHERE reward_id = $1)`, [demoRewardId]);
+    }
   });
 }
 

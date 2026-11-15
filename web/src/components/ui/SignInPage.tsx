@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import { api, dataSource } from '../../api'
+import { api, apiBaseUrl, dataSource } from '../../api'
 import { DEMO_FAN_CONTACT, DEMO_STAFF_CONTACT } from '../../api/fixtures/seed'
 import type { DemoSignInContact, Role } from '../../api/types'
 import { FanDetailsForm } from './FanDetailsForm'
@@ -103,6 +103,7 @@ function DemoSignInForm({ role }: { role: Role }) {
 }
 
 function EmailSignInForm({ staff, linkFailed }: { staff: boolean; linkFailed: boolean }) {
+  const mailpitUrl = `http://${new URL(apiBaseUrl, window.location.origin).hostname}:8025`
   const [email, setEmail] = useState('')
   const mutation = useMutation({
     mutationFn: (address: string) => api.requestMagicLink({
@@ -146,7 +147,7 @@ function EmailSignInForm({ staff, linkFailed }: { staff: boolean; linkFailed: bo
       {mutation.isSuccess && (
         <Notice tone="ok">
           Check your email for the sign-in link (or open{' '}
-          <a className="font-semibold underline" href="http://104.238.146.107:8025" target="_blank" rel="noopener noreferrer">
+          <a className="font-semibold underline" href={mailpitUrl} target="_blank" rel="noopener noreferrer">
             Mailpit
           </a>
           ).

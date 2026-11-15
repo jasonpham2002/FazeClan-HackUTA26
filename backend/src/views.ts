@@ -8,7 +8,7 @@ export const consentVersion = 'ai-interview-v1'
 
 export const eventColumns = `
   e.id, e.title, e.description, e.location, e.starts_at AS "startsAt",
-  e.deadline, e.timezone, e.capacity, e.status, e.is_demo AS "isDemo",
+  e.deadline, e.timezone, e.capacity, e.status, e.is_demo AS "isDemo", e.minimum_points AS "minimumPoints",
   e.capacity - (SELECT count(*)::int FROM applications a WHERE a.event_id=e.id AND a.status='accepted') AS "remainingCapacity"
 `
 
@@ -49,10 +49,11 @@ export async function getActivity(db: Database, userId: string) {
 }
 
 export async function recordActivity(db: PoolClient, userId: string, eventId: string, type: string, isDemo: boolean) {
-  await db.query(`
+  const { rows: [activity] } = await db.query<{ id: string }>(`
     INSERT INTO activity_events (user_id,event_id,type,source,is_demo)
-    VALUES ($1,$2,$3,'platform',$4)
+    VALUES ($1,$2,$3,'platform',$4) RETURNING id
   `, [userId, eventId, type, isDemo])
+  return activity.id
 }
 
 export async function getEvent(db: Database, id: string, userId?: string, staff = false) {
