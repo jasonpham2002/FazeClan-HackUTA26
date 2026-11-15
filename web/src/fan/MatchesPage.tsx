@@ -143,7 +143,6 @@ export function MatchesPage() {
   const upcoming = list.filter(match => match.status === 'upcoming' || match.status === 'live').sort((a, b) => a.startsAt.localeCompare(b.startsAt))
   const finished = list.filter(match => match.status === 'finished' || match.status === 'canceled').sort((a, b) => b.startsAt.localeCompare(a.startsAt))
   const tournamentMarkets = allMarkets.filter(market => !market.matchId || !list.some(match => match.id === market.matchId))
-  const sample = list.some(match => match.isDemo) || allMarkets.some(market => market.isDemo)
 
   return (
     <div className="space-y-10">
@@ -152,10 +151,7 @@ export function MatchesPage() {
         <p className="text-lg text-muted">
           The FaZe CS2 calendar. Call a result before it locks and earn FaZe ID points when staff confirm you were right. It is always free.
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          {sample && <SampleBadge label="Placeholder fixtures and predictions" />}
-          <Link to="/" className={`${linkClass} text-sm`}>Looking for community events? They are listed separately.</Link>
-        </div>
+        <Link to="/" className={`${linkClass} inline-block text-sm`}>Looking for community events? They are listed separately.</Link>
       </header>
 
       {markets.isError && <Notice tone="danger">Predictions could not be loaded, so only the match calendar is shown.</Notice>}
