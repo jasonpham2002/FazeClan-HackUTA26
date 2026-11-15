@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Set the saved theme before the stylesheet paints.
+      try {
+        if (localStorage.getItem('faze-color-mode') === 'light') {
+          document.documentElement.dataset.theme = 'light'
+        }
+      } catch {
+        // Default to dark when browser storage is unavailable.
+      }
+    </script>
     <title>Event applications — independent FaZe Clan concept</title>
   </head>
   <body>

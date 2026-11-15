@@ -113,6 +113,10 @@ function EventForm({ event }: { event: EventRecord | null }) {
 
   const { errors, input } = validate(form)
   const shown: Errors = submitted ? errors : {}
+  const publishing = form.publicationStatus === 'published' && event?.publicationStatus !== 'published'
+  const submitLabel = event
+    ? publishing ? 'Publish event' : 'Save event'
+    : publishing ? 'Create and publish event' : 'Create event'
 
   const mutation = useMutation({
     mutationFn: async (payload: EventInput) => {
@@ -125,6 +129,8 @@ function EventForm({ event }: { event: EventRecord | null }) {
     onSuccess: async (eventId) => {
       await queryClient.invalidateQueries({ queryKey: ['events'] })
       await queryClient.invalidateQueries({ queryKey: ['event', eventId] })
+      await queryClient.invalidateQueries({ queryKey: ['fan', 'events'] })
+      await queryClient.invalidateQueries({ queryKey: ['fan', 'event', eventId] })
       if (event) setSaved(true)
       else navigate(`/admin/events/${eventId}/interview`)
     },
@@ -150,7 +156,7 @@ function EventForm({ event }: { event: EventRecord | null }) {
       onSubmit={(e) => {
         e.preventDefault()
         setSubmitted(true)
-        if (input) mutation.mutate(input)
+        if (input && !mutation.isPending) mutation.mutate(input)
       }}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -162,7 +168,7 @@ function EventForm({ event }: { event: EventRecord | null }) {
             </Link>
           )}
           <Button type="submit" variant="primary" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : event ? 'Save event' : 'Create event'}
+            {mutation.isPending ? 'Saving…' : submitLabel}
           </Button>
         </div>
       </div>
@@ -173,6 +179,9 @@ function EventForm({ event }: { event: EventRecord | null }) {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="text-muted">Event</span>
               <PublicationBadge status={event.publicationStatus} />
+              {event.publicationStatus === 'published' && (
+                <Link to={`/events/${event.id}`} className={linkClass}>View on fan page</Link>
+              )}
               <span className="ml-4 text-muted">Interview</span>
               {interview.isPending ? (
                 <Badge>Checking…</Badge>
@@ -189,7 +198,7 @@ function EventForm({ event }: { event: EventRecord | null }) {
             </div>
             {interview.data && !interview.data.published && (
               <Notice tone="warn">
-                The interview has no published version, so applicants cannot be interviewed yet.{' '}
+                Publish the interview questions to let fans submit applications.{' '}
                 <Link to={`/admin/events/${event.id}/interview`} className={linkClass}>
                   Open the interview editor
                 </Link>
@@ -240,7 +249,7 @@ function EventForm({ event }: { event: EventRecord | null }) {
               ))}
             </select>
           </Field>
-          <Field label="Publication status" htmlFor="publicationStatus" hint="Draft events are hidden from fans.">
+          <Field label="Publication status" htmlFor="publicationStatus" hint="Submit this form with Published selected to show the event on the fan page.">
             <select
               id="publicationStatus"
               className={inputClass}
