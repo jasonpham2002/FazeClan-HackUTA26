@@ -8,8 +8,8 @@ One Vite + React + TypeScript app for both audiences:
 ## Run it
 
 ```bash
-npm install
-npm run dev        # http://localhost:5173/admin
+npm ci
+npm run dev -- --port 5189 --strictPort  # http://localhost:5189/ (fans), /admin (staff)
 npm run test       # unit tests
 npm run build      # type-check + production build
 ```
@@ -49,10 +49,10 @@ src/
   api/fixtures/          fixture adapter + seed data
   lib/                   interview validation/reordering, rates, dates
   admin/                 staff pages and components
-  fan/                   Minh's pages go here
+  fan/                   Johnny's fan pages
 ```
 
-### For Minh: shared pieces
+### For Johnny: shared pieces
 
 - `styles/tokens.css` — values from the FaZe brand toolkit: Black `#111111`, Red Alert `#E4002B`, white, with Anton for titles and Source Sans Pro for text (both self-hosted from `src/assets/fonts`).
   - Color utilities: `bg-bg`, `bg-surface`, `bg-surface-2`, `border-border`, `border-border-strong`, `text-text`, `text-muted`, `text-subtle`, `bg-accent`, `text-ok|warn|danger|info`.
@@ -84,7 +84,7 @@ src/
 11. **Activity `type` values**: `application` | `invitation_accepted` | `attendance`.
 12. **Validation limits** (also Johnny): 1–6 questions, nonempty prompts, duration 60–300 s, follow-ups 0–2. Enforced client-side in `lib/interviewConfig.ts`; the server must enforce the same.
 
-### Johnny
+### Minh and Tuong (AI call team)
 
 1. **Transcript `speaker` values**: the UI expects `agent` | `applicant`.
 2. **`transcriptSegmentIds`** must be the IDs of segments returned in the application's transcript. A missing ID is shown as a warning, not hidden.
@@ -97,3 +97,7 @@ src/
 - Transcript and model text are rendered as plain text, never as HTML.
 - Missing answers, missing evidence, failed extraction, partial calls and unpublished drafts each have a visible state.
 - No score or ranking of applicants. Rates with a zero denominator show an em dash.
+
+## Connected integration
+
+Fan and staff fixture changes now synchronize in the same tab and across tabs. See [INTEGRATION.md](INTEGRATION.md) for the end-to-end demo, shared fan endpoint contracts, intentional differences from the older standalone frontend, and remaining live-backend work. The staff branch is preserved; the prior standalone `frontend/` is retained as a reference, not the connected entry point.

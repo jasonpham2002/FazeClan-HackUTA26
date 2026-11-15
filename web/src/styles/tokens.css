@@ -110,6 +110,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Keep long event titles, profile fields and sources within narrow screens. */
+main { min-width: 0; overflow-wrap: anywhere; }
+main input, main textarea, main select { min-width: 0; max-width: 100%; }
+nav a[aria-current='page'] { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+@media (max-width: 640px) { main input, main textarea, main select { font-size: 16px; } }
+
 ::selection {
   background: rgb(228 0 43 / 0.5);
   color: #ffffff;

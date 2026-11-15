@@ -2,6 +2,22 @@
 
 Independent FaZe Clan concept: an event application platform with an editable AI FaceTime interview and human-reviewed invitations.
 
+## Connected demo ? start here
+
+The shared app is now in [web/](web/README.md). Khoi's staff dashboard and Johnny's fan pages use the same router, typed API client, and fixture database. Follow the [integration runbook](web/INTEGRATION.md) for the complete fan ? staff ? invitation walkthrough.
+
+From this repository on Windows:
+
+```powershell
+cd web
+npm.cmd ci
+npm.cmd run dev -- --host 127.0.0.1 --port 5189 --strictPort
+```
+
+Open http://127.0.0.1:5189 for fans and http://127.0.0.1:5189/admin for staff. Fixture mode is explicit; no real call, login, or backend is simulated as a live integration.
+
+The earlier standalone [frontend/](frontend/README.md) is preserved for reference. Its separate demo store does not sync with the connected app. Use `web/` for team integration and confirm its [shared API contracts](web/INTEGRATION.md) with Jason.
+
 ## Team assignments
 
 | Owner | Scope | Detailed plan |
@@ -11,7 +27,7 @@ Independent FaZe Clan concept: an event application platform with an editable AI
 | Minh + Tuong | Muse integration, AI host, call experience, transcripts and structured answers | [Johnny.md](Johnny.md) |
 | Khoi | Staff dashboard, editable questions, application review and analytics | [Khoi.md](Khoi.md) |
 
-Each assignment includes shared contracts, implementation steps, dependencies, a 24-hour schedule and acceptance checks. The fan frontend starter is available in [frontend/](frontend/README.md); backend, staff dashboard and live calls remain integration work.
+Each assignment includes shared contracts, implementation steps, dependencies, a 24-hour schedule and acceptance checks. The fan and staff frontend is connected in [web/](web/README.md); the real backend and AI calls remain integration work.
 
 ## Shared demo journey
 
@@ -26,7 +42,7 @@ Staff publishes event questions → fan signs up and applies → fan requests an
 
 Use Jason's assignment for API and persistence coordination, Minh and Tuong's for the agent/result contract, and the linked frontend assignments for the two user journeys.
 
-## Local fan frontend
+## Earlier standalone fan frontend (reference)
 
 Run from the repository root:
 

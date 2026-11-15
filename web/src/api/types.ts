@@ -25,7 +25,23 @@ export interface Me {
   email: string
   displayName: string | null
   role: Role
+  phone?: string | null
 }
+
+/** Fan-safe response; deliberately excludes staff reasons, transcripts and review notes. */
+export interface FanApplication {
+  id: string
+  userId: string
+  event: EventRecord
+  profile: Me
+  status: ApplicationStatus
+  submittedAt: string
+  call: CallAttempt | null
+  interviewVersion: PublishedVersionMeta
+  invitation: { expiresAt: string | null; capacityAvailable: boolean } | null
+}
+
+export interface FixtureFanInput { displayName: string; email: string; phone: string }
 
 // ---------- Events ----------
 

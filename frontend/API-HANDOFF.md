@@ -1,5 +1,7 @@
 # Fan API handoff — Johnny to Jason
 
+> This standalone prototype is retained for reference. The connected fan/staff app now lives in [web/](../web/README.md); its shared API contract and run instructions are in [web/INTEGRATION.md](../web/INTEGRATION.md). The two demo stores are separate.
+
 Status: proposed contract for review. Fixtures are fictional. These endpoints are application APIs, not Muse/Chert provider endpoints.
 
 ## Authentication and transport

@@ -1,5 +1,7 @@
 # Fan platform — Johnny
 
+> This standalone prototype is retained for reference. The connected fan/staff app now lives in [web/](../web/README.md); its shared API contract and run instructions are in [web/INTEGRATION.md](../web/INTEGRATION.md). The two demo stores are separate.
+
 The fan experience covers event details, application, interview readiness, call status, staff decision, and invitation acceptance. Minh and Tuong own the real AI/call service; Jason owns authentication and persistence; Khoi owns the staff dashboard.
 
 ## Preview

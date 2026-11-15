@@ -9,6 +9,8 @@ import type {
   InterviewState,
 } from '../types'
 import { createSeed, type Db, type InterviewEntry, type StoredApplication } from './seed'
+import { eventUnavailable, normalizePhone } from '../../fan/logic'
+import type { FanApplication, ActivityEvent } from '../types'
 
 export const FIXTURE_DB_KEY = 'faze-demo-db-v1'
 
@@ -51,7 +53,11 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as Db
-        if (parsed.schema === 1) return parsed
+        if (parsed.schema === 1) {
+          // Upgrade existing staff-only fixture stores without discarding edits.
+          parsed.fan ??= createSeed().fan
+          return parsed
+        }
       } catch {
         // Corrupt data: fall through to a fresh seed.
       }
@@ -63,6 +69,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
 
   function save(db: Db) {
     storage.setItem(FIXTURE_DB_KEY, JSON.stringify(db))
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('faze-fixture-update'))
   }
 
   async function call<T>(kind: 'read' | 'write', run: (db: Db) => T): Promise<T> {
@@ -125,7 +132,95 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
     }
   }
 
+  function ownApplication(db: Db, id: string): StoredApplication {
+    return db.applications.find(app => app.id === id && app.applicant.id === db.fan.id) ?? notFound('Your application')
+  }
+  function fanView(db: Db, app: StoredApplication): FanApplication {
+    const event = db.events.find(event => event.id === app.event.id) ?? notFound('Event')
+    const version = app.interviewVersion
+    return {
+      id: app.id, userId: app.applicant.id, event, profile: { ...db.fan, phone: app.phone || db.fan.phone },
+      status: app.status, submittedAt: app.submittedAt, call: app.attempts.at(-1) ?? null,
+      interviewVersion: { versionId: version.versionId, versionNumber: version.versionNumber, publishedAt: version.publishedAt },
+      invitation: app.status === 'invited' ? { expiresAt: event.startsAt, capacityAvailable: capacityOf(db, event.id).accepted < event.capacity } : null,
+    }
+  }
+  function recordActivity(app: StoredApplication, type: ActivityEvent['type']) {
+    app.activity.push({ id: `act_${crypto.randomUUID()}`, type, eventTitle: app.event.title, timestamp: now().toISOString(), source: 'Shared fixture platform', isDemo: true })
+  }
+
   return {
+    getFanMe: () => call('read', db => db.fan),
+    setFixtureFan: input => call('write', db => {
+      const phone = normalizePhone(input.phone)
+      if (!input.displayName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) || !phone) {
+        throw new ApiError(422, 'VALIDATION_FAILED', 'Enter a name, email and phone number including its country code.')
+      }
+      db.fan = { ...db.fan, displayName: input.displayName.trim(), email: input.email.trim(), phone }
+    }),
+    listFanEvents: () => call('read', db => db.events.filter(event => event.publicationStatus === 'published')),
+    getFanEvent: id => call('read', db => db.events.find(event => event.id === id && event.publicationStatus === 'published') ?? notFound('Event')),
+    listMyApplications: () => call('read', db => db.applications.filter(app => app.applicant.id === db.fan.id).sort((a,b) => b.submittedAt.localeCompare(a.submittedAt)).map(app => fanView(db, app))),
+    getMyApplication: id => call('read', db => fanView(db, ownApplication(db, id))),
+    listMyActivity: () => call('read', db => db.applications.filter(app => app.applicant.id === db.fan.id).flatMap(app => app.activity).sort((a,b) => b.timestamp.localeCompare(a.timestamp))),
+    createFanApplication: (eventId, consent) => call('write', db => {
+      const event = db.events.find(event => event.id === eventId) ?? notFound('Event')
+      const unavailable = eventUnavailable(event, now().getTime())
+      if (unavailable) throw new ApiError(409, 'APPLICATIONS_CLOSED', unavailable)
+      if (!consent) throw new ApiError(422, 'CONSENT_REQUIRED', 'Agree to the AI interview before applying.')
+      if (!db.fan.phone || !normalizePhone(db.fan.phone)) throw new ApiError(422, 'PHONE_REQUIRED', 'Add a phone number including its country code.')
+      const duplicate = db.applications.find(app => app.applicant.id === db.fan.id && app.event.id === eventId)
+      if (duplicate) throw new ApiError(409, 'ALREADY_APPLIED', 'You already have an application. Open My profile to view it.')
+      const version = interviewOf(db, eventId).versions.at(-1)
+      if (!version) throw new ApiError(409, 'INTERVIEW_NOT_PUBLISHED', 'The event interview is not ready yet.')
+      const id = `app_${crypto.randomUUID()}`
+      const app: StoredApplication = {
+        id, status: 'interview_pending', submittedAt: now().toISOString(),
+        applicant: { id: db.fan.id, displayName: db.fan.displayName, email: db.fan.email },
+        phone: db.fan.phone, consentAcceptedAt: now().toISOString(), event: { id: event.id, title: event.title },
+        interviewVersion: structuredClone(version), selectedAttemptId: null, attempts: [], result: null,
+        transcript: [], activity: [], pastApplications: [], decision: null, decisionHistory: [],
+      }
+      recordActivity(app, 'application')
+      db.applications.push(app)
+      return { id }
+    }),
+    requestFanCall: id => call('write', db => {
+      const app = ownApplication(db, id)
+      if (!app.consentAcceptedAt) throw new ApiError(422, 'CONSENT_REQUIRED', 'Interview consent is required.')
+      if (!['submitted', 'interview_pending'].includes(app.status) || (app.attempts.at(-1) && !['missed', 'failed', 'canceled'].includes(app.attempts.at(-1)!.status))) {
+        throw new ApiError(409, 'CALL_NOT_ELIGIBLE', 'A call is active or this application is no longer eligible.')
+      }
+      app.attempts.push({ id: `call_${crypto.randomUUID()}`, status: 'queued', startedAt: null, endedAt: null, durationSeconds: null, failureCode: null, processingStatus: null })
+      app.status = 'interview_pending'
+    }),
+    simulateFanCall: (id, outcome) => call('write', db => {
+      const app = ownApplication(db, id)
+      const attempt = app.attempts.at(-1)
+      if (!attempt || !['queued', 'dialing', 'connected'].includes(attempt.status) || !['submitted', 'interview_pending'].includes(app.status)) throw new ApiError(409, 'NO_ACTIVE_CALL', 'Request a demo interview first.')
+      attempt.status = outcome
+      attempt.endedAt = now().toISOString()
+      if (outcome === 'missed') { attempt.failureCode = 'demo_missed'; return }
+      attempt.startedAt = now().toISOString(); attempt.durationSeconds = 0; attempt.processingStatus = 'ready'
+      app.selectedAttemptId = attempt.id
+      app.status = 'review_pending'
+      app.transcript = app.interviewVersion.config.questions.flatMap((question, index) => [
+        { id: `seg_${attempt.id}_${index}_agent`, callAttemptId: attempt.id, sequence: index * 2 + 1, speaker: 'agent' as const, text: question.prompt, timestamp: now().toISOString() },
+        { id: `seg_${attempt.id}_${index}_fan`, callAttemptId: attempt.id, sequence: index * 2 + 2, speaker: 'applicant' as const, text: 'Synthetic demo answer: I want to meet other fans and enjoy the community event. No real interview occurred.', timestamp: now().toISOString() },
+      ])
+      app.result = { schemaVersion: 1, callAttemptId: attempt.id, interviewVersionId: app.interviewVersion.versionId,
+        summary: 'Synthetic demo interview. No real call or AI evaluation occurred.', interests: ['demo community event'],
+        answers: app.interviewVersion.config.questions.map((question, index) => ({ questionId: question.id, summary: 'Synthetic sample: wants to meet other fans.', transcriptSegmentIds: [`seg_${attempt.id}_${index}_fan`], completeness: 'answered' as const })), unansweredQuestionIds: [], reviewNotes: ['Simulated fixture data only.'],
+      }
+    }),
+    acceptFanInvitation: id => call('write', db => {
+      const app = ownApplication(db, id)
+      const event = db.events.find(event => event.id === app.event.id) ?? notFound('Event')
+      if (app.status !== 'invited') throw new ApiError(409, 'NOT_INVITED', 'There is no active invitation to accept.')
+      if (Date.parse(event.startsAt) <= now().getTime()) throw new ApiError(409, 'INVITATION_EXPIRED', 'This invitation has expired.')
+      if (capacityOf(db, event.id).accepted >= event.capacity) throw new ApiError(409, 'CAPACITY_FULL', 'All event places have been claimed.')
+      app.status = 'accepted'; recordActivity(app, 'invitation_accepted')
+    }),
     getMe: () => call('read', (db) => db.me),
 
     listAdminEvents: () => call('read', (db) => db.events),
@@ -213,6 +308,9 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
         const app = db.applications.find((a) => a.id === id) ?? notFound('Application')
         if (app.status === 'accepted') {
           throw new ApiError(409, 'INVITATION_ALREADY_ACCEPTED', 'The applicant already accepted their invitation.')
+        }
+        if (input.decision === 'invite' && app.status !== 'invited' && capacityOf(db, app.event.id).invited >= capacityOf(db, app.event.id).capacity) {
+          throw new ApiError(409, 'CAPACITY_FULL', 'Invitations have reached the event capacity.')
         }
         const record = {
           id: `dec_${now().getTime().toString(36)}`,

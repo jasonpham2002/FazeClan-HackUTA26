@@ -43,6 +43,7 @@ export function AdminLayout() {
             <span className="title-display text-xl">Staff dashboard</span>
           </NavLink>
           <span className="text-[0.8125rem] text-muted">Independent concept for FaZe Clan</span>
+          <Link to="/" className={linkClass}>Fan experience</Link>
           {me.data && (
             <span className="ml-auto text-[0.8125rem] text-muted">
               Signed in as <span className="text-text">{me.data.displayName ?? me.data.email}</span> · {me.data.role}

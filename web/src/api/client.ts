@@ -10,6 +10,9 @@ import type {
   InterviewState,
   Me,
   Page,
+  FanApplication,
+  FixtureFanInput,
+  ActivityEvent,
 } from './types'
 
 export class ApiError extends Error {
@@ -30,6 +33,19 @@ export class ApiError extends Error {
  * "saved" is always what the backend returned on a fresh read.
  */
 export interface ApiClient {
+  getFanMe(): Promise<Me>
+  /** Fixture-only persona configuration; live mode must not implement fake auth. */
+  setFixtureFan(input: FixtureFanInput): Promise<void>
+  listFanEvents(): Promise<EventRecord[]>
+  getFanEvent(id: string): Promise<EventRecord>
+  listMyApplications(): Promise<FanApplication[]>
+  getMyApplication(id: string): Promise<FanApplication>
+  createFanApplication(eventId: string, consent: boolean): Promise<{ id: string }>
+  requestFanCall(id: string): Promise<void>
+  acceptFanInvitation(id: string): Promise<void>
+  listMyActivity(): Promise<ActivityEvent[]>
+  /** Fixture-only lifecycle controls; no real AI result is represented. */
+  simulateFanCall(id: string, outcome: 'missed' | 'completed'): Promise<void>
   /** GET /me */
   getMe(): Promise<Me>
   /** CONFIRM (Jason): GET /admin/events — not in the documented endpoint list. */

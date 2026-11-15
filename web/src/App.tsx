@@ -7,15 +7,21 @@ import { InterviewEditorPage } from './admin/pages/InterviewEditorPage'
 import { OverviewPage } from './admin/pages/OverviewPage'
 import { DemoBanner } from './components/ui/DemoBanner'
 import { EmptyState } from './components/ui/ui'
-import { FanPlaceholder } from './fan/FanPlaceholder'
+import { FanLayout, FanEventsPage, FanEventPage, FanApplicationPage, FanProfilePage, FanSignInPage } from './fan/FanPages'
 
 export default function App() {
   return (
     <div className="min-h-screen">
       <DemoBanner />
       <Routes>
-        {/* Fan routes (Minh): add /sign-in, /events/:id, /applications/:id, /profile here. */}
-        <Route path="/" element={<FanPlaceholder />} />
+        {/* Fan routes (Johnny), using the same API/store and components as staff. */}
+        <Route element={<FanLayout />}>
+          <Route path="/" element={<FanEventsPage />} />
+          <Route path="/events/:id" element={<FanEventPage />} />
+          <Route path="/applications/:id" element={<FanApplicationPage />} />
+          <Route path="/profile" element={<FanProfilePage />} />
+          <Route path="/sign-in" element={<FanSignInPage />} />
+        </Route>
 
         {/* Staff routes (Khoi) */}
         <Route path="/admin" element={<AdminLayout />}>

@@ -27,11 +27,12 @@ export interface InterviewEntry {
 }
 
 /** Capacity is derived on read so it always reflects current decisions. */
-export type StoredApplication = Omit<ApplicationDetail, 'capacity'>
+export type StoredApplication = Omit<ApplicationDetail, 'capacity'> & { phone?: string; consentAcceptedAt?: string }
 
 export interface Db {
   schema: 1
   me: Me
+  fan: Me
   events: EventRecord[]
   interviews: Record<string, InterviewEntry>
   applications: StoredApplication[]
@@ -359,6 +360,7 @@ export function createSeed(): Db {
   return {
     schema: 1,
     me: { id: STAFF.id, email: 'staff@example.com', displayName: STAFF.displayName, role: 'staff' },
+    fan: { id: 'fan_demo', email: 'fan@example.com', displayName: 'Demo Fan', phone: '+12025550123', role: 'fan' },
     events: [
       {
         id: EVENT_ID,

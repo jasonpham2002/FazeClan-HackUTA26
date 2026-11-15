@@ -58,6 +58,17 @@ export function createHttpClient(baseUrl: string): ApiClient {
   const enc = encodeURIComponent
 
   return {
+    getFanMe: () => request('GET', '/me'),
+    setFixtureFan: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Use the real authentication service to change your profile.') },
+    listFanEvents: () => request('GET', '/events'),
+    getFanEvent: (id) => request('GET', `/events/${enc(id)}`),
+    listMyApplications: () => request('GET', '/me/applications'),
+    getMyApplication: (id) => request('GET', `/applications/${enc(id)}`),
+    createFanApplication: (eventId, consent) => request('POST', `/events/${enc(eventId)}/applications`, { consentVersion: 'ai-interview-v1', consentAccepted: consent }),
+    requestFanCall: async (id) => { await request('POST', `/applications/${enc(id)}/call`, {}) },
+    acceptFanInvitation: async (id) => { await request('POST', `/applications/${enc(id)}/accept`, {}) },
+    listMyActivity: () => request('GET', '/me/activity'),
+    simulateFanCall: async () => { throw new ApiError(400, 'FIXTURE_ONLY', 'Call simulation is unavailable in live mode.') },
     getMe: () => request('GET', '/me'),
     listAdminEvents: () => request('GET', '/admin/events'),
     getAdminEvent: (id) => request('GET', `/admin/events/${enc(id)}`),
