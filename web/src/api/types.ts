@@ -285,3 +285,91 @@ export interface Analytics {
   /** completed interviews / connected calls */
   completionRate: Rate
 }
+
+// ---------- Insights ----------
+
+/**
+ * CONFIRM (Jason): response of GET /admin/insights. Every count is people
+ * (applications), not call attempts. Suggestions are not part of the response;
+ * the UI derives them from these numbers (src/lib/insights.ts).
+ */
+export interface InsightsReport {
+  generatedAt: string
+  /** True when any counted record is synthetic sample data. */
+  includesDemoData: boolean
+  /** Newest event first. */
+  events: EventInsights[]
+  retention: RetentionSummary
+}
+
+export interface EventInsights {
+  event: { id: string; title: string; startsAt: string; timezone: string; capacity: number }
+  /** 'past' once the event's start time has passed. */
+  phase: 'upcoming' | 'past'
+  funnel: {
+    applied: number
+    /** Applicants with at least one completed interview call. */
+    interviewed: number
+    /** Applicants invited at some point, even if later waitlisted. */
+    invited: number
+    accepted: number
+    /** null before the event happens. */
+    attended: number | null
+  }
+  /** Past events only: false when nobody was marked as attended, so turnout is unknown. */
+  attendanceRecorded: boolean
+  /** applications / capacity */
+  demand: Rate
+  /** attended / accepted; null until attendance is recorded. */
+  showUp: Rate | null
+  /** attended / capacity; null until attendance is recorded. */
+  fill: Rate | null
+  /** Returning = applied to an event that started before this one. */
+  audience: { newFans: number; returningFans: number }
+  dropOff: {
+    noInterview: number
+    notInvited: number
+    invitedNotAccepted: number
+    /** null until attendance is recorded. */
+    acceptedNotAttended: number | null
+  }
+  /** Stated interests from interview results, most mentioned first. */
+  interests: { label: string; count: number }[]
+  questions: QuestionInsight[]
+}
+
+/** Answer completeness per question, over applications that have an interview result. */
+export interface QuestionInsight {
+  questionId: string
+  prompt: string
+  answered: number
+  partial: number
+  skipped: number
+  notAsked: number
+}
+
+export interface RetentionSummary {
+  /** Distinct fans who applied to any event. */
+  fans: number
+  /** Fans who applied to two or more events. */
+  repeatFans: number
+  /** Past events that have a later event, newest first. */
+  cohorts: RetentionCohort[]
+}
+
+export interface RetentionCohort {
+  eventId: string
+  title: string
+  startsAt: string
+  /** Fans marked as attended. */
+  attendees: number
+  /** Of those attendees, how many applied to a later event. */
+  cameBack: number
+}
+
+export interface Suggestion {
+  id: string
+  tone: 'ok' | 'info' | 'warn'
+  title: string
+  detail: string
+}

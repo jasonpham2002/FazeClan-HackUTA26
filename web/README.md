@@ -3,7 +3,7 @@
 One Vite + React + TypeScript app for both audiences:
 
 - **Staff dashboard** (Khoi) under `/admin` — built.
-- **Fan pages** (Johnny) under `/`, `/sign-in`, `/events/:id`, `/applications/:id`, `/profile` ? connected through the shared API adapter.
+- **Fan pages** (Johnny) under `/`, `/sign-in`, `/events/:id`, `/applications/:id`, `/profile` — connected through the shared API adapter.
 
 ## Run it
 
@@ -35,8 +35,13 @@ See the [live integration guide](INTEGRATION.md#run-with-the-local-backend) for 
 | `/admin/events/:id/interview` | Interview editor: save draft, publish version |
 | `/admin/events/:id/applications` | Application list with filters and pagination |
 | `/admin/applications/:id` | Application detail: Q&A with evidence, transcript, activity, decision |
+| `/admin/insights` | Insights across events: turnout, show-up, returning fans, drop-off, stated interests, question skip rates, and rule-based suggestions for the next event |
 
 Fixture examples: `/admin/applications/app_maya` (clean), `app_devon` (partial call), `app_priya` (extraction failed, transcript kept), `app_luis` (missed call), `app_sam` (no call, no activity).
+
+Insights sample history: two past sample events, Fan Meetup Austin (Oct 2025) and Summer Watch Party Houston (Jun 2026), with attendance recorded. Maya, Jordan, Alex and Riley took part in them before applying to Community Night, so returning fans and "came back" have numbers. Because the backend lists every published event to fans, these past events also appear on the fan home page as closed. Older saved sample data gets them added automatically; "Reset sample data" also works.
+
+Insights logic lives in `src/lib/insights.ts`: `buildInsights` produces the API report (the fixture uses it directly), and `eventSuggestions` / `retentionSuggestions` derive the suggestions in the browser. Everything is group-level; nothing scores or labels an individual fan, and no rate-based suggestion is made from fewer than 5 fans.
 
 ## Layout
 
@@ -84,6 +89,13 @@ src/
 10. **Analytics** → counts plus `connectionRate` and `completionRate` as `{ numerator, denominator }` so the UI can state the denominator and show an em dash on zero.
 11. **Activity `type` values**: `application` | `invitation_accepted` | `attendance`.
 12. **Validation limits** (also Johnny): 1–6 questions, nonempty prompts, duration 60–300 s, follow-ups 0–2. Enforced client-side in `lib/interviewConfig.ts`; the server must enforce the same.
+13. **New endpoint `GET /admin/insights`** (staff only, not built yet) → `InsightsReport` in `types.ts`. It is read-only and uses existing tables only:
+    - per event: applied, interviewed (a completed call), ever invited (a `decisions` row with `invited`), accepted, attended (an `attendance` row in `activity_events`), plus returning applicants (applied to an event that started earlier)
+    - stated interests from `interview_results.interests`, and answer completeness per question from `answers`
+    - retention: for each past event followed by a later one, attendees and how many applied to a later event
+    - `includesDemoData` when any counted record has `is_demo`
+
+    Suggestions are not in the response; the UI derives them. `src/lib/insights.ts` has the reference calculation, and `api/fixtures/insights.test.ts` shows the expected numbers.
 
 ### Minh and Tuong (AI call team)
 

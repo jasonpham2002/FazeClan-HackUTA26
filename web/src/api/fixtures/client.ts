@@ -11,7 +11,8 @@ import type {
   FixtureFanInput,
   Me,
 } from '../types'
-import { createSeed, DEMO_FAN_CONTACT, DEMO_STAFF_CONTACT, type Db, type InterviewEntry, type StoredApplication } from './seed'
+import { addSampleHistory, createSeed, DEMO_FAN_CONTACT, DEMO_STAFF_CONTACT, type Db, type InterviewEntry, type StoredApplication } from './seed'
+import { buildInsights, type InsightsSource } from '../../lib/insights'
 import { eventUnavailable, normalizePhone } from '../../fan/logic'
 import type { FanApplication, ActivityEvent } from '../types'
 
@@ -66,6 +67,8 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
           if (!parsed.otherFans) {
             migrateFanAccounts(parsed)
           }
+          // Older stores predate the past sample events used by Insights.
+          addSampleHistory(parsed)
           return parsed
         }
       } catch {
@@ -209,6 +212,35 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
       invitation: app.status === 'invited' ? { expiresAt: event.startsAt, capacityAvailable: capacityOf(db, event.id).accepted < event.capacity } : null,
     }
   }
+  /** Flattens stored applications into the per-application records Insights counts. */
+  function insightsSource(db: Db): InsightsSource {
+    const attended = new Set<string>()
+    for (const app of db.applications) {
+      for (const item of app.activity) {
+        if (item.type !== 'attendance') continue
+        const eventId = item.eventId ?? db.events.find((event) => event.title === item.eventTitle)?.id
+        if (eventId) attended.add(`${app.applicant.id}|${eventId}`)
+      }
+    }
+    return {
+      now: now().toISOString(),
+      events: db.events.map(({ id, title, startsAt, timezone, capacity }) => ({ id, title, startsAt, timezone, capacity })),
+      applications: db.applications.map((app) => ({
+        userId: app.applicant.id,
+        eventId: app.event.id,
+        status: app.status,
+        interviewed: app.attempts.some((item) => item.status === 'completed'),
+        everInvited: app.decisionHistory.some((item) => item.decision === 'invite'),
+        attended: attended.has(`${app.applicant.id}|${app.event.id}`),
+        interests: app.result?.interests ?? [],
+        answers: (app.result?.answers ?? []).map(({ questionId, completeness }) => ({ questionId, completeness })),
+        questions: normalizeOrder(app.interviewVersion.config.questions).map(({ id, prompt }) => ({ id, prompt })),
+        // Everything in fixture mode is sample data.
+        isDemo: true,
+      })),
+    }
+  }
+
   function recordActivity(app: StoredApplication, type: ActivityEvent['type']) {
     app.activity.push({ id: `act_${crypto.randomUUID()}`, type, eventId: app.event.id, eventTitle: app.event.title, timestamp: now().toISOString(), source: 'Shared fixture platform', isDemo: true })
   }
@@ -462,5 +494,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
           completionRate: { numerator: completed, denominator: connected },
         }
       }),
+
+    getInsights: () => staffCall('read', (db) => buildInsights(insightsSource(db))),
   }
 }

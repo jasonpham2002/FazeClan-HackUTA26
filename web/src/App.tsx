@@ -3,6 +3,7 @@ import { AdminLayout } from './admin/AdminLayout'
 import { ApplicationDetailPage } from './admin/pages/ApplicationDetailPage'
 import { ApplicationListPage } from './admin/pages/ApplicationListPage'
 import { EventEditorPage } from './admin/pages/EventEditorPage'
+import { InsightsPage } from './admin/pages/InsightsPage'
 import { InterviewEditorPage } from './admin/pages/InterviewEditorPage'
 import { OverviewPage } from './admin/pages/OverviewPage'
 import { DemoBanner } from './components/ui/DemoBanner'
@@ -29,6 +30,7 @@ export default function App() {
         {/* Staff routes (Khoi) */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<OverviewPage />} />
+          <Route path="insights" element={<InsightsPage />} />
           <Route path="events/new" element={<EventEditorPage />} />
           <Route path="events/:id" element={<EventEditorPage />} />
           <Route path="events/:id/interview" element={<InterviewEditorPage />} />

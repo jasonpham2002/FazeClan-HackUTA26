@@ -212,6 +212,8 @@ export function createHttpClient(baseUrl: string): ApiClient {
     recordAttendance: async (id) => {
       await request('POST', `/admin/applications/${enc(id)}/attendance`, {})
     },
+    // CONFIRM (Jason): not implemented in the backend yet; shape is InsightsReport in types.ts.
+    getInsights: () => request('GET', '/admin/insights'),
     async getAnalytics(eventId) {
       const counts = await request<AnalyticsDto>('GET', `/admin/events/${enc(eventId)}/analytics`)
       return {

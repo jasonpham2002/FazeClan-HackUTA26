@@ -362,7 +362,7 @@ export function createSeed(): Db {
   riley.decision = decision('dec_riley_1', 'waitlist', '2026-11-12T00:30:00.000Z', 'Holding spots while capacity is confirmed.')
   riley.decisionHistory = [riley.decision]
 
-  return {
+  const db: Db = {
     schema: 1,
     me: { ...STAFF, ...DEMO_STAFF_CONTACT, role: 'staff' },
     fan: { id: 'fan_demo', ...DEMO_FAN_CONTACT, displayName: 'Demo Fan', role: 'fan' },
@@ -384,5 +384,200 @@ export function createSeed(): Db {
       [EVENT_ID]: { draft: structuredClone(config), draftUpdatedAt: version.publishedAt, versions: [version] },
     },
     applications: [maya, devon, priya, luis, sam, jordan, alex, riley],
+  }
+  addSampleHistory(db)
+  return db
+}
+
+/*
+ * Two past sample events so Insights has turnout, no-shows and returning fans
+ * to show. Some current applicants (Maya, Jordan, Alex, Riley) took part
+ * before; everyone else is a synthetic past-only fan. All records are demo.
+ */
+export const HISTORY_EVENT_IDS = ['evt_austin', 'evt_houston'] as const
+
+type PastOutcome = 'attended' | 'no_show' | 'waitlisted' | 'invited' | 'no_interview'
+
+interface PastEntry {
+  name: string
+  outcome: PastOutcome
+  interests: string[]
+  skipLastQuestion?: boolean
+}
+
+const RETURNING: Record<string, { id: string; email: string }> = {
+  'Maya Tran': { id: 'user_app_maya', email: 'maya@example.com' },
+  'Jordan Lee': { id: 'user_app_jordan', email: 'jordan@example.com' },
+  'Alex Kim': { id: 'user_app_alex', email: 'alex@example.com' },
+  'Riley Chen': { id: 'user_app_riley', email: 'riley@example.com' },
+}
+
+const PAST_EVENTS: {
+  event: EventRecord
+  entries: PastEntry[]
+}[] = [
+  {
+    event: {
+      id: 'evt_austin',
+      title: 'Fan Meetup Austin',
+      description: 'A small meetup with a casual community tournament and a creator Q&A.',
+      location: 'East Austin, TX',
+      startsAt: '2025-10-18T23:00:00.000Z',
+      timezone: 'America/Chicago',
+      capacity: 20,
+      applicationDeadline: '2025-10-11T04:59:00.000Z',
+      publicationStatus: 'published',
+    },
+    entries: [
+      { name: 'Maya Tran', outcome: 'attended', interests: ['community tournament', 'meet and greet'] },
+      { name: 'Jordan Lee', outcome: 'attended', interests: ['community tournament', 'creator Q&A'] },
+      { name: 'Casey Morgan', outcome: 'attended', interests: ['creator Q&A', 'meet and greet'] },
+      { name: 'Drew Santos', outcome: 'attended', interests: ['community tournament'] },
+      { name: 'Elena Ruiz', outcome: 'attended', interests: ['meet and greet', 'watch party'] },
+      { name: 'Fatima Ali', outcome: 'attended', interests: ['creator Q&A'] },
+      { name: 'Grace Liu', outcome: 'attended', interests: ['community tournament', 'merch drop'] },
+      { name: 'Ethan Park', outcome: 'no_show', interests: ['community tournament'] },
+      { name: 'Hunter Reed', outcome: 'no_show', interests: ['meet and greet'] },
+      { name: 'Isaac Moore', outcome: 'waitlisted', interests: ['creator Q&A'] },
+      { name: 'Jade Wong', outcome: 'invited', interests: ['watch party'] },
+      { name: 'Kai Turner', outcome: 'no_interview', interests: [] },
+    ],
+  },
+  {
+    event: {
+      id: 'evt_houston',
+      title: 'Summer Watch Party Houston',
+      description: 'A watch party for the summer tournament finals, with mini-games between matches.',
+      location: 'Midtown, Houston, TX',
+      startsAt: '2026-06-20T23:00:00.000Z',
+      timezone: 'America/Chicago',
+      capacity: 24,
+      applicationDeadline: '2026-06-13T04:59:00.000Z',
+      publicationStatus: 'published',
+    },
+    entries: [
+      { name: 'Jordan Lee', outcome: 'attended', interests: ['watch party', 'community tournament'] },
+      { name: 'Alex Kim', outcome: 'attended', interests: ['watch party', 'creator Q&A'] },
+      { name: 'Riley Chen', outcome: 'no_show', interests: ['watch party'] },
+      { name: 'Casey Morgan', outcome: 'attended', interests: ['watch party'] },
+      { name: 'Elena Ruiz', outcome: 'attended', interests: ['watch party', 'mini-games'] },
+      { name: 'Lena Fischer', outcome: 'attended', interests: ['mini-games'], skipLastQuestion: true },
+      { name: 'Marco Silva', outcome: 'attended', interests: ['watch party'], skipLastQuestion: true },
+      { name: 'Nia Johnson', outcome: 'attended', interests: ['merch drop'] },
+      { name: 'Omar Haddad', outcome: 'attended', interests: ['watch party', 'mini-games'], skipLastQuestion: true },
+      { name: 'Quinn Avery', outcome: 'no_show', interests: ['mini-games'], skipLastQuestion: true },
+      { name: 'Rosa Diaz', outcome: 'no_show', interests: ['watch party'] },
+      { name: 'Theo Grant', outcome: 'no_show', interests: ['community tournament'] },
+      { name: 'Uma Shah', outcome: 'waitlisted', interests: ['watch party'], skipLastQuestion: true },
+      { name: 'Victor Lin', outcome: 'invited', interests: ['mini-games'] },
+      { name: 'Zoe Carter', outcome: 'no_interview', interests: [] },
+    ],
+  },
+]
+
+/** Adds the past sample events once. Safe to call on an older saved store. */
+export function addSampleHistory(db: Db) {
+  if (db.events.some((event) => event.id === HISTORY_EVENT_IDS[0])) return
+  const config = defaultInterviewConfig()
+
+  for (const { event, entries } of PAST_EVENTS) {
+    const short = event.id.replace('evt_', '')
+    const version: StoredVersion = {
+      versionId: `iv_${short}_1`,
+      versionNumber: 1,
+      publishedAt: new Date(Date.parse(event.applicationDeadline) - 21 * 86400000).toISOString(),
+      config: structuredClone(config),
+    }
+    db.events.push(structuredClone(event))
+    db.interviews[event.id] = { draft: structuredClone(config), draftUpdatedAt: version.publishedAt, versions: [version] }
+
+    entries.forEach((entry, index) => {
+      const [first, last] = entry.name.split(' ')
+      const known = RETURNING[entry.name]
+      const applicant = {
+        id: known?.id ?? `user_${first.toLowerCase()}_${last.toLowerCase()}`,
+        displayName: entry.name,
+        email: known?.email ?? `${first.toLowerCase()}@example.com`,
+      }
+      // Maya's Austin application already appears in her current record under this ID.
+      const id = entry.name === 'Maya Tran' && event.id === 'evt_austin' ? 'app_maya_old' : `app_${short}_${first.toLowerCase()}`
+      const submittedAt = new Date(Date.parse(event.applicationDeadline) - (14 - index) * 86400000).toISOString()
+      const status: ApplicationStatus =
+        entry.outcome === 'attended' || entry.outcome === 'no_show'
+          ? 'accepted'
+          : entry.outcome === 'waitlisted'
+            ? 'waitlisted'
+            : entry.outcome === 'invited'
+              ? 'invited'
+              : 'interview_pending'
+
+      const app: StoredApplication = {
+        id,
+        status,
+        submittedAt,
+        applicant,
+        event: { id: event.id, title: event.title },
+        interviewVersion: structuredClone(version),
+        selectedAttemptId: null,
+        attempts: [],
+        result: null,
+        transcript: [],
+        activity: [activity(`act_${id}_applied`, 'application', event.title, submittedAt, event.id)],
+        pastApplications: [],
+        decision: null,
+        decisionHistory: [],
+      }
+
+      if (entry.outcome !== 'no_interview') {
+        const callId = `call_${id}`
+        const startedAt = new Date(Date.parse(submittedAt) + 2 * 3600000).toISOString()
+        const topic = entry.interests[0] ?? 'the community'
+        const call = buildInterview(
+          callId,
+          startedAt,
+          [
+            { questionId: 'q_1', agent: 'What FaZe content have you enjoyed recently?', applicant: `Mostly anything with ${topic}.`, summary: `Enjoys content around ${topic}.`, completeness: 'answered' },
+            { questionId: 'q_2', agent: 'What made you want to attend this event?', applicant: 'I want to hang out with other fans in person.', summary: 'Wants to meet other fans in person.', completeness: 'answered' },
+            { questionId: 'q_3', agent: 'What would you be most excited to do there?', applicant: `Definitely the ${topic}.`, summary: `Most excited about the ${topic}.`, completeness: 'answered' },
+            entry.skipLastQuestion
+              ? { questionId: 'q_4', agent: 'Have you joined a FaZe event or community activity before?', applicant: 'I would rather skip that one.', summary: 'Chose to skip this question.', completeness: 'skipped' }
+              : { questionId: 'q_4', agent: 'Have you joined a FaZe event or community activity before?', applicant: 'A couple of online community things.', summary: 'Has joined online community activities.', completeness: 'answered' },
+          ],
+          `Synthetic past applicant interested in ${entry.interests.join(' and ') || 'the event'}.`,
+          entry.interests,
+        )
+        app.attempts = [attempt(callId, 'completed', startedAt, 150, 'ready')]
+        app.selectedAttemptId = callId
+        app.transcript = call.transcript
+        app.result = { ...call.result, interviewVersionId: version.versionId }
+      }
+
+      const decidedAt = new Date(Date.parse(submittedAt) + 86400000).toISOString()
+      if (status === 'accepted' || status === 'invited') {
+        app.decision = decision(`dec_${id}`, 'invite', decidedAt, null)
+      } else if (status === 'waitlisted') {
+        app.decision = decision(`dec_${id}`, 'waitlist', decidedAt, 'Capacity reached.')
+      }
+      if (app.decision) app.decisionHistory = [app.decision]
+
+      if (status === 'accepted') {
+        app.activity.push(activity(`act_${id}_accepted`, 'invitation_accepted', event.title, new Date(Date.parse(decidedAt) + 3600000).toISOString(), event.id))
+      }
+      // Maya's Austin attendance is already recorded on her current application.
+      if (entry.outcome === 'attended' && id !== 'app_maya_old') {
+        app.activity.push(activity(`act_${id}_attended`, 'attendance', event.title, event.startsAt, event.id))
+      }
+      db.applications.push(app)
+    })
+  }
+
+  // Show the earlier applications on the returning fans' current records.
+  const pastFor = (userId: string) =>
+    db.applications
+      .filter((app) => app.applicant.id === userId && (HISTORY_EVENT_IDS as readonly string[]).includes(app.event.id))
+      .map((app) => ({ id: app.id, eventTitle: app.event.title, submittedAt: app.submittedAt, status: app.status }))
+  for (const current of ['app_jordan', 'app_alex', 'app_riley']) {
+    const app = db.applications.find((candidate) => candidate.id === current)
+    if (app && app.pastApplications.length === 0) app.pastApplications = pastFor(app.applicant.id)
   }
 }

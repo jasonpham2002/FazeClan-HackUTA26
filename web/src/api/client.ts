@@ -15,6 +15,7 @@ import type {
   FanApplication,
   FixtureFanInput,
   ActivityEvent,
+  InsightsReport,
 } from './types'
 
 export class ApiError extends Error {
@@ -79,4 +80,6 @@ export interface ApiClient {
   recordAttendance(id: string): Promise<void>
   /** GET /admin/events/:id/analytics */
   getAnalytics(eventId: string): Promise<Analytics>
+  /** CONFIRM (Jason): GET /admin/insights — turnout, returning fans and interview patterns across all events. */
+  getInsights(): Promise<InsightsReport>
 }
