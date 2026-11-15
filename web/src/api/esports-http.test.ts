@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import bundle from '../../../backend/data/faze-cs2-2026-11-15.json'
+import { playerRecord } from './esports'
 import { createHttpClient } from './http'
 import { portraitFor } from './portraits'
 
@@ -13,9 +14,17 @@ it('renders the imported roster identity consistently from list and detail endpo
     .mockResolvedValueOnce(Response.json({ ...profile, checkedAt: rosterSource.observedAt }))
   const api = createHttpClient('/api')
   const [player] = await api.listPlayers()
-  expect(player).toMatchObject({ id: entry.id, handle: entry.handle, rosterStatus: 'active', team: 'FaZe', sourceUrl: rosterSource.url, role: null, imageUrl: portraitFor(entry.handle)?.url ?? null, isDemo: false })
+  expect(player).toMatchObject({ id: entry.id, handle: entry.handle, rosterStatus: 'active', team: 'FaZe', sourceUrl: rosterSource.url, role: 'Rifler', imageUrl: portraitFor(entry.handle)?.url ?? null, isDemo: false })
   expect(await api.getPlayer(entry.id)).toEqual(player)
   expect(fetchMock).toHaveBeenLastCalledWith(`/api/players/${entry.id}`, expect.anything())
+})
+it('prefers the API role and fills gaps only for known active starters', () => {
+  const entry = bundle.players[0]
+  const rosterSource = bundle.sources.find(source => source.id === entry.rosterSourceId)!
+  const row = { ...entry, rosterSource, rosterStatus: 'active' as const, checkedAt: rosterSource.observedAt }
+  expect(playerRecord({ ...row, role: 'In-game leader' }).role).toBe('In-game leader')
+  expect(playerRecord({ ...row, rosterStatus: 'former', role: null }).role).toBeNull()
+  expect(playerRecord({ ...row, id: 'unlisted-player', role: null }).role).toBeNull()
 })
 it('maps sourced aggregates without inventing dates, missing metrics or recent matches', async () => {
   const snapshot = bundle.snapshots[0]

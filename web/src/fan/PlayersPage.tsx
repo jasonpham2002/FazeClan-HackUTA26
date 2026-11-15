@@ -5,27 +5,26 @@ import { api } from '../api'
 import type { Player } from '../api/types'
 import { Icon } from '../components/ui/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/ui'
-import { formatDateTime } from '../lib/format'
 import { isUnverified, PlayerPortrait, PREVIEW_LABEL, RosterBadge, SampleBadge, useFan } from './fazeid-ui'
 import { useReveal } from './useReveal'
 
 function PlayerCard({ player, index, following }: { player: Player; index: number; following: boolean }) {
   return (
     <li className="fz-rise" style={{ '--i': index + 2 } as CSSProperties}>
-      <Link to={`/players/${encodeURIComponent(player.id)}`} className="fz-roster-card group" aria-label={`${player.handle}, ${player.role ?? 'role not listed'}. View profile`}>
-        <div className="fz-portrait-wrap">
-          <PlayerPortrait player={player} className="aspect-[3/4] w-full" />
-        </div>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
-        <span aria-hidden="true" className="fz-card-index figure absolute top-3 left-4 text-lg text-white/55">
-          {String(index + 1).padStart(2, '0')}
-        </span>
-        {following && (
-          <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
-            <Icon name="check" className="size-3.5" /> Following
+      <Link to={`/players/${encodeURIComponent(player.id)}`} className="fz-roster-card group h-full" aria-label={`${player.handle}, ${player.role ?? 'role not listed'}. View profile`}>
+        <div className="relative overflow-hidden">
+          <PlayerPortrait player={player} className="fz-portrait-wrap aspect-square w-full sm:aspect-[4/3]" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#0d0d0d] to-transparent" />
+          <span aria-hidden="true" className="fz-card-index figure absolute top-3 left-2 text-lg text-white/55 sm:left-4">
+            {String(index + 1).padStart(2, '0')}
           </span>
-        )}
-        <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-5">
+          {following && (
+            <span className="absolute top-3 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white sm:right-3">
+              <Icon name="check" className="size-3.5" /> Following
+            </span>
+          )}
+        </div>
+        <div className="p-4 text-white sm:p-5">
           <p className="fz-display text-[clamp(1.75rem,3.2vw,2.5rem)]">{player.handle}</p>
           <p className="mt-1.5 text-sm text-white/75">{player.role ?? 'Role not listed'}</p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -70,39 +69,28 @@ export function PlayersPage({ embedded = false }: { embedded?: boolean }) {
   const active = list.filter(player => player.rosterStatus === 'active')
   const coaches = list.filter(player => player.rosterStatus === 'coach')
   const others = list.filter(player => player.rosterStatus === 'benched' || player.rosterStatus === 'former')
-  const checkedAt = list.map(player => player.checkedAt).sort().at(-1) ?? null
   const sample = list.some(player => player.isDemo)
   const followed = follows.data ?? []
 
   return (
     <div className="space-y-16 sm:space-y-20">
-      <header className="relative grid gap-8 pt-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-end">
+      <header className="relative space-y-4 pt-2">
         <div aria-hidden="true" className="pointer-events-none absolute -top-24 -left-24 -z-10 size-[28rem] rounded-full bg-[radial-gradient(closest-side,rgb(228_0_43/0.22),transparent)]" />
-        <div className="space-y-5">
-          <Heading className="fz-display fz-rise text-[clamp(3.5rem,11vw,8.5rem)]" style={{ '--i': 1 } as CSSProperties}>
-            The FaZe<br /><span className="text-accent-text">CS2 roster</span>
-          </Heading>
-        </div>
-        <div className="fz-rise space-y-4 lg:pb-3" style={{ '--i': 2 } as CSSProperties}>
-          <p className="max-w-[46ch] text-lg leading-relaxed text-muted">
-            Choose a player for their numbers first, then their next matches, their best moments and the fan events around them.
+        <Heading className="fz-display fz-rise text-[clamp(3.5rem,11vw,8.5rem)]" style={{ '--i': 1 } as CSSProperties}>
+          The FaZe<br /><span className="text-accent-text">CS2 roster</span>
+        </Heading>
+        {list.some(isUnverified) && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            <SampleBadge label={PREVIEW_LABEL} />
+            Statistics and highlights use demo data.
           </p>
-          <p className="fz-meta">
-            Roster checked {formatDateTime(checkedAt)}. Refreshed by hand, not a live feed.
+        )}
+        {sample && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            <SampleBadge label="Placeholder players" />
+            Real names, photos and statistics replace these when the team’s verified import is ready.
           </p>
-          {list.some(isUnverified) && (
-            <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-              <SampleBadge label={PREVIEW_LABEL} />
-              Roles, statistics and highlights here are demo or placeholder content until the team’s verified data arrives.
-            </p>
-          )}
-          {sample && (
-            <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-              <SampleBadge label="Placeholder players" />
-              Real names, photos and statistics replace these when the team’s verified import is ready.
-            </p>
-          )}
-        </div>
+        )}
       </header>
 
       {players.isPending ? <LoadingState label="Loading the roster…" />

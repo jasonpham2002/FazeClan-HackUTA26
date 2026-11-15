@@ -1,3 +1,4 @@
+import { createRequestId } from '../lib/requestId'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -57,7 +58,7 @@ function RewardRow({ reward, balance, canRedeem }: { reward: Reward; balance: nu
       <div className="flex flex-col items-start gap-2 sm:items-end">
         <p className="figure text-3xl tabular-nums">{reward.cost}<span className="ml-1.5 font-sans text-sm font-semibold text-muted">points</span></p>
         {blocked ? <p className="text-sm text-muted sm:text-right">{blocked}</p>
-          : key === null ? <Button variant="primary" icon="gift" onClick={() => { setDone(false); redeem.reset(); setKey(crypto.randomUUID()) }}>Redeem</Button>
+          : key === null ? <Button variant="primary" icon="gift" onClick={() => { setDone(false); redeem.reset(); setKey(createRequestId()) }}>Redeem</Button>
           : (
             <div className="space-y-2 rounded-lg border border-border-strong bg-surface-2 p-3 sm:max-w-xs">
               <p className="text-sm">Spend {reward.cost} of your {balance} points on {reward.title}?</p>

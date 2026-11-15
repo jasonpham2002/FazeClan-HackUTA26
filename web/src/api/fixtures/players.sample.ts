@@ -1,12 +1,5 @@
-/*
- * PLACEHOLDER player data for fixture mode only.
- *
- * Nothing here describes a real person, team result or video. The handles are
- * deliberately generic so that no real FaZe player is shown with made-up
- * numbers. Replace the exports of this one file with Johnny's verified import
- * bundle (roster, stats, matches) and Minh's highlight / insight fixtures; the
- * pages need no other change. Live mode never reads this file.
- */
+/* Fixture mode reuses the named starters and their roles. Sample statistics and highlights are labeled as demo data. */
+import { fazeStarters } from '../esports'
 import { portraitFor } from '../portraits'
 import type {
   EsportsMatch, Highlights, MatchStatLine, Player, PlayerInsight, PlayerStats, TournamentProgress,
@@ -33,11 +26,6 @@ function player(n: number, role: string, rosterStatus: Player['rosterStatus'] = 
 }
 
 /**
- * The five current starters as named by the team (Khoi, 2026-11-15). Names only:
- * role, photo and source stay empty until Johnny's verified import supplies them,
- * and no statistics, highlights or analysis are attached to these real players.
- */
-/**
  * Portraits cleared for use, by player ID. Each file lives in web/public/players/
  * (a transparent PNG or WebP cut-out works best) with its credit line. Empty
  * until approved images are supplied; the UI falls back to a silhouette.
@@ -52,11 +40,11 @@ function portrait(handle: string) {
   return portraitFor(handle)
 }
 
-export const rosterPlayers: Player[] = ['frozen', 'Twistzz', 'Neityu', 'jcobbb', 'JBOEN'].map(handle => ({
+export const rosterPlayers: Player[] = fazeStarters.map(({ handle, role }) => ({
   id: `player_${handle.toLowerCase()}`,
   handle,
   displayName: null,
-  role: null,
+  role,
   rosterStatus: 'active' as const,
   team: FAZE,
   imageUrl: portrait(handle)?.url ?? null,
