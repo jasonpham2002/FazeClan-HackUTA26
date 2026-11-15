@@ -78,18 +78,6 @@ export function OverviewPage() {
         </div>
       </div>
 
-      <nav aria-label="Event sections" className="flex flex-wrap gap-2">
-        <Link to={`/admin/events/${selected.id}/applications`} className={linkButtonClass}>
-          Applications
-        </Link>
-        <Link to={`/admin/events/${selected.id}/interview`} className={linkButtonClass}>
-          Interview
-        </Link>
-        <Link to={`/admin/events/${selected.id}`} className={linkButtonClass}>
-          Event details
-        </Link>
-      </nav>
-
       <EventOverview key={selected.id} event={selected} />
     </div>
   )

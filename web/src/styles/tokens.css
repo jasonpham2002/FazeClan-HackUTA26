@@ -163,21 +163,12 @@ html {
     url('../assets/brand/tiger-camo-bw.jpg');
 }
 
-.staff-header {
+.access-header {
   background: linear-gradient(100deg, #0a0a0a 0%, #141414 40%, #3d000c 75%, #7a0018 100%);
 }
 
-[data-theme='light'] .staff-header {
+[data-theme='light'] .access-header {
   background: linear-gradient(100deg, #ffffff 0%, #fbf7f8 55%, #f3dde2 100%);
-}
-
-.faze-logo {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.375rem;
-}
-
-[data-theme='light'] .faze-logo {
-  background: #111111;
 }
 
 ::selection {
