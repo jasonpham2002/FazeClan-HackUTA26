@@ -85,14 +85,19 @@ export function formatDate(iso: string, timeZone?: string): string {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone }).format(date)
 }
 
-export type PickState = 'open' | 'submitted' | 'locked' | 'correct' | 'incorrect' | 'settled' | 'void'
+export type PickState = 'open' | 'submitted' | 'locked' | 'redeemed' | 'claimable' | 'incorrect' | 'settled' | 'void'
+
+/** FaZe vs Falcons, 3 November 2026. Winners can still redeem this result. */
+export const CLAIMABLE_MATCH_ID = 'hltv-match-2399994'
 
 /** What a market means to this fan: the market state combined with their own pick. */
 export function pickState(market: PredictionMarket): PickState {
   if (market.state === 'void') return 'void'
   if (market.state === 'settled') {
-    if (!market.myPick) return 'settled'
-    return market.myPick.optionId === market.result?.optionId ? 'correct' : 'incorrect'
+    if (!market.myPick || !market.result) return 'settled'
+    if (market.myPick.optionId !== market.result.optionId) return 'incorrect'
+    if (market.matchId === CLAIMABLE_MATCH_ID && !market.redeemed) return 'claimable'
+    return 'redeemed'
   }
   if (market.state === 'locked') return 'locked'
   return market.myPick ? 'submitted' : 'open'
@@ -102,8 +107,9 @@ const pickLabels: Record<PickState, [string, BadgeTone]> = {
   open: ['Open for picks', 'info'],
   submitted: ['Pick submitted', 'ok'],
   locked: ['Locked', 'warn'],
-  correct: ['Correct', 'ok'],
-  incorrect: ['Incorrect', 'gray'],
+  redeemed: ['Redeemed', 'ok'],
+  claimable: ['Winner', 'ok'],
+  incorrect: ['Lost', 'danger'],
   settled: ['Settled', 'neutral'],
   void: ['Void', 'neutral'],
 }

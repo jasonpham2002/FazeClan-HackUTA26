@@ -7,6 +7,30 @@ import { Badge, Button, EmptyState, ErrorState, linkButtonClass, linkClass, Load
 import { formatDateTime } from '../lib/format'
 import { pageTitle, PickStateBadge, pickState, SampleBadge, useFan } from './fazeid-ui'
 
+function RedeemPoints({ market }: { market: PredictionMarket }) {
+  const queries = useQueryClient()
+  const redeem = useMutation({
+    mutationFn: () => api.redeemPrediction(market.id),
+    onSuccess: () => {
+      queries.invalidateQueries({ queryKey: ['markets'] })
+      queries.invalidateQueries({ queryKey: ['fan', 'points'] })
+    },
+  })
+  return (
+    <div className="mt-4 space-y-3">
+      <p className="text-sm text-ok">You had the winner. Redeem {market.award} points onto your FaZe ID.</p>
+      <Button type="button" variant="primary" disabled={redeem.isPending} onClick={() => redeem.mutate()}>
+        {redeem.isPending ? 'Redeeming…' : `Redeem ${market.award} points`}
+      </Button>
+      {redeem.isError && (
+        <Notice tone="danger">
+          Not redeemed. {redeem.error instanceof ApiError ? redeem.error.message : 'Try again.'} No points were added.
+        </Notice>
+      )}
+    </div>
+  )
+}
+
 function describeLock(iso: string): string {
   const minutes = Math.round((Date.parse(iso) - Date.now()) / 60000)
   if (!Number.isFinite(minutes) || minutes <= 0) return 'at the deadline'
@@ -99,7 +123,15 @@ export function MarketCard({ market }: { market: PredictionMarket }) {
       )}
       {state === 'submitted' && <p className="mt-2 text-sm text-muted">Saved {formatDateTime(market.myPick!.submittedAt)}. Locks {formatDateTime(market.locksAt)}.</p>}
       {state === 'locked' && <p className="mt-2 text-sm text-muted">Picks closed {formatDateTime(market.locksAt)}. Staff confirm the result before any points are awarded.</p>}
-      {state === 'correct' && <p className="mt-2 text-sm text-ok">You earned {market.award} points. See them in <Link to="/profile" className={linkClass}>My FaZe ID</Link>.</p>}
+      {state === 'redeemed' && (
+        <p className="mt-2 text-sm text-ok">
+          {market.redeemed
+            ? <>Redeemed. {market.award} points are on <Link to="/profile" className={linkClass}>My FaZe ID</Link>.</>
+            : 'Redeemed.'}
+        </p>
+      )}
+      {state === 'incorrect' && <p className="mt-2 text-sm text-danger">Lost. This pick did not earn points.</p>}
+      {state === 'claimable' && fan && <RedeemPoints market={market} />}
       {state === 'void' && <p className="mt-2 text-sm text-muted">This prediction was voided. No points were awarded.</p>}
     </div>
   )

@@ -5,7 +5,8 @@ import { z } from 'zod'
 import type { Auth } from './auth.ts'
 import { transaction } from './db.ts'
 import { fail } from './errors.ts'
-import { pageQuery, pointAmount } from './points.ts'
+import { CLAIMABLE_MATCH_ID, ensureHistoryPredictions } from './history-predictions.ts'
+import { lockFan, pageQuery, pointAmount, pointBalance } from './points.ts'
 import { idParams } from './views.ts'
 
 const externalId = z.string().trim().min(1).max(128)
@@ -157,12 +158,55 @@ export function registerPredictionRoutes(app: FastifyInstance, db: Pool, auth: A
   app.get('/predictions/markets', async request => {
     const user = await auth.sessionUser(request)
     const fanId = user?.role === 'fan' ? user.id : null
+    await ensureHistoryPredictions(db, fanId)
     const { rows } = await db.query(`
       SELECT ${marketColumns},
-        (SELECT row_to_json(p) FROM (SELECT ${pickColumns} FROM predictions WHERE market_id=m.id AND user_id=$1) p) AS "myPick"
+        (SELECT row_to_json(p) FROM (SELECT ${pickColumns} FROM predictions WHERE market_id=m.id AND user_id=$1) p) AS "myPick",
+        EXISTS (
+          SELECT 1 FROM point_transactions
+          WHERE user_id = $1 AND source_type = 'prediction' AND source_id = m.id
+        ) AS redeemed
       FROM prediction_markets m LEFT JOIN prediction_settlements s ON s.market_id=m.id ORDER BY m.locks_at DESC,m.id
     `, [fanId])
     return { markets: rows }
+  })
+
+  app.post('/predictions/markets/:id/redeem', async request => {
+    const fan = await auth.requireUser(request, 'fan')
+    const { id } = idParams.parse(request.params)
+    await ensureHistoryPredictions(db, fan.id)
+    return transaction(db, async client => {
+      await lockFan(client, fan.id)
+      const { rows: [market] } = await client.query<{
+        referenceId: string
+        award: number
+        title: string
+        resultId: string | null
+        pickId: string | null
+      }>(`
+        SELECT m.reference_id AS "referenceId", m.award_points AS award, m.title,
+          s.option_id AS "resultId",
+          (SELECT option_id FROM predictions WHERE market_id = m.id AND user_id = $2) AS "pickId"
+        FROM prediction_markets m
+        LEFT JOIN prediction_settlements s ON s.market_id = m.id
+        WHERE m.id = $1
+        FOR UPDATE OF m
+      `, [id, fan.id])
+      if (!market) fail(404, 'MARKET_NOT_FOUND', 'Prediction market not found.')
+      if (market.referenceId !== CLAIMABLE_MATCH_ID) {
+        fail(409, 'PREDICTION_NOT_CLAIMABLE', 'Points for this match were already redeemed.')
+      }
+      if (!market.resultId || market.pickId !== market.resultId) {
+        fail(409, 'NOT_A_WINNER', 'Only the winning pick can be redeemed.')
+      }
+      const inserted = await client.query(`
+        INSERT INTO point_transactions (user_id, delta, reason, source_type, source_id)
+        VALUES ($1, $2, $3, 'prediction', $4)
+        ON CONFLICT (user_id, source_type, source_id) DO NOTHING
+        RETURNING id
+      `, [fan.id, market.award, `Redeemed prediction: ${market.title}`, id])
+      return { awarded: inserted.rowCount ? market.award : 0, balance: await pointBalance(client, fan.id) }
+    })
   })
 
   app.post('/predictions/markets/:id/pick', async (request, reply) => {

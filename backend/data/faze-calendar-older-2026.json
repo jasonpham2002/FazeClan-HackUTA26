@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "isDemo": false,
+  "collectedAt": "2026-11-15T20:00:00Z",
+  "limitations": [
+    "Older finished series were taken from the public HLTV match pages on 15 November 2026. This is not a live score feed.",
+    "Start times are the clock shown on those HLTV pages, read as Europe/Copenhagen local time and stored in UTC.",
+    "Lineups for these series list the five active players who were on the match page. Benched players and the coach are not attached."
+  ],
+  "tournaments": [
+    {
+      "id": "hltv-event-8245",
+      "name": "IEM Beijing 2026",
+      "stage": "Finished",
+      "standing": "13-16th",
+      "sourceUrl": "https://www.hltv.org/events/8245/iem-beijing-2026",
+      "teams": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "falcons", "label": "Falcons" },
+        { "id": "furia", "label": "FURIA" }
+      ],
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "rlg-tesla-cup-2026",
+      "name": "RLG Tesla Cup 2026",
+      "stage": "Finished",
+      "standing": "3rd",
+      "sourceUrl": "https://www.hltv.org/matches/2399878/b8-vs-faze-rlg-tesla-cup-2026",
+      "teams": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "b8", "label": "B8" },
+        { "id": "gamerlegion", "label": "GamerLegion" },
+        { "id": "alliance", "label": "Alliance" }
+      ],
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "draculan-season-7",
+      "name": "Digital Crusade DraculaN Season 7",
+      "stage": "Finished",
+      "standing": "5-6th",
+      "sourceUrl": "https://www.hltv.org/matches/2399635/faze-vs-bcgame-digital-crusade-draculan-season-7",
+      "teams": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "bc-game", "label": "BC.Game" }
+      ],
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "stake-ranked-episode-4",
+      "name": "Stake Ranked Episode 4",
+      "stage": "Finished",
+      "standing": "7-8th",
+      "sourceUrl": "https://www.hltv.org/matches/2398000/astralis-vs-faze-stake-ranked-episode-4",
+      "teams": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "astralis", "label": "Astralis" }
+      ],
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    }
+  ],
+  "matches": [
+    {
+      "id": "hltv-match-2399857",
+      "title": "FaZe vs FURIA",
+      "tournamentId": "hltv-event-8245",
+      "stage": "Group A upper bracket quarter-final - BO3",
+      "participants": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "furia", "label": "FURIA" }
+      ],
+      "startsAt": "2026-11-02T08:50:00Z",
+      "timezone": "Asia/Shanghai",
+      "status": "finished",
+      "result": { "winner": "FURIA", "score": "1-2" },
+      "sourceUrl": "https://www.hltv.org/matches/2399857/furia-vs-faze-iem-beijing-2026",
+      "timeSourceUrl": "https://www.hltv.org/matches/2399857/furia-vs-faze-iem-beijing-2026",
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "hltv-match-2399878",
+      "title": "FaZe vs B8",
+      "tournamentId": "rlg-tesla-cup-2026",
+      "stage": "3rd place decider - BO3",
+      "participants": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "b8", "label": "B8" }
+      ],
+      "startsAt": "2026-10-29T15:20:00Z",
+      "timezone": "Europe/Copenhagen",
+      "status": "finished",
+      "result": { "winner": "FaZe", "score": "2-0" },
+      "sourceUrl": "https://www.hltv.org/matches/2399878/b8-vs-faze-rlg-tesla-cup-2026",
+      "timeSourceUrl": "https://www.hltv.org/matches/2399878/b8-vs-faze-rlg-tesla-cup-2026",
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "hltv-match-2399877",
+      "title": "FaZe vs GamerLegion",
+      "tournamentId": "rlg-tesla-cup-2026",
+      "stage": "Semi-final - BO3",
+      "participants": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "gamerlegion", "label": "GamerLegion" }
+      ],
+      "startsAt": "2026-10-29T11:10:00Z",
+      "timezone": "Europe/Copenhagen",
+      "status": "finished",
+      "result": { "winner": "GamerLegion", "score": "1-2" },
+      "sourceUrl": "https://www.hltv.org/matches/2399877/faze-vs-gamerlegion-rlg-tesla-cup-2026",
+      "timeSourceUrl": "https://www.hltv.org/matches/2399877/faze-vs-gamerlegion-rlg-tesla-cup-2026",
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "hltv-match-2399867",
+      "title": "FaZe vs Alliance",
+      "tournamentId": "rlg-tesla-cup-2026",
+      "stage": "Group A opening match - BO3",
+      "participants": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "alliance", "label": "Alliance" }
+      ],
+      "startsAt": "2026-10-27T10:55:00Z",
+      "timezone": "Europe/Copenhagen",
+      "status": "finished",
+      "result": { "winner": "FaZe", "score": "2-0" },
+      "sourceUrl": "https://www.hltv.org/matches/2399867/alliance-vs-faze-rlg-tesla-cup-2026",
+      "timeSourceUrl": "https://www.hltv.org/matches/2399867/alliance-vs-faze-rlg-tesla-cup-2026",
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "hltv-match-2399635",
+      "title": "FaZe vs BC.Game",
+      "tournamentId": "draculan-season-7",
+      "stage": "Playoffs - BO3",
+      "participants": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "bc-game", "label": "BC.Game" }
+      ],
+      "startsAt": "2026-10-22T13:00:00Z",
+      "timezone": "Europe/Copenhagen",
+      "status": "finished",
+      "result": { "winner": "BC.Game", "score": "0-2" },
+      "sourceUrl": "https://www.hltv.org/matches/2399635/faze-vs-bcgame-digital-crusade-draculan-season-7",
+      "timeSourceUrl": "https://www.hltv.org/matches/2399635/faze-vs-bcgame-digital-crusade-draculan-season-7",
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    },
+    {
+      "id": "hltv-match-2398000",
+      "title": "FaZe vs Astralis",
+      "tournamentId": "stake-ranked-episode-4",
+      "stage": "Lower bracket round 1 - BO3",
+      "participants": [
+        { "id": "hltv-6667", "label": "FaZe" },
+        { "id": "astralis", "label": "Astralis" }
+      ],
+      "startsAt": "2026-10-02T12:10:00Z",
+      "timezone": "Europe/Copenhagen",
+      "status": "finished",
+      "result": { "winner": "Astralis", "score": "1-2" },
+      "sourceUrl": "https://www.hltv.org/matches/2398000/astralis-vs-faze-stake-ranked-episode-4",
+      "timeSourceUrl": "https://www.hltv.org/matches/2398000/astralis-vs-faze-stake-ranked-episode-4",
+      "playerIds": ["hltv-9960", "hltv-10394", "hltv-21972", "hltv-22383", "hltv-22866"]
+    }
+  ]
+}

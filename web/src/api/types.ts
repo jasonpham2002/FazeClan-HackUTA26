@@ -529,6 +529,8 @@ export interface PredictionMarket {
   state: MarketState
   myPick: { optionId: string; submittedAt: string } | null
   result: { optionId: string; sourceUrl: string; settledAt: string } | null
+  /** True once this fan's winning points for the market are on the ledger. */
+  redeemed?: boolean
   isDemo?: boolean
 }
 

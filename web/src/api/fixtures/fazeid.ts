@@ -134,7 +134,7 @@ interface Context {
 
 type FazeIdMethods = Pick<ApiClient,
   'listPlayers' | 'getPlayer' | 'getPlayerStats' | 'getPlayerSchedule' | 'listMatches' | 'getPlayerHighlights' |
-  'getPlayerInsight' | 'listFollows' | 'setFollow' | 'listMarkets' | 'submitPick' | 'getMyPoints' | 'listRewards' |
+  'getPlayerInsight' | 'listFollows' | 'setFollow' | 'listMarkets' | 'submitPick' | 'redeemPrediction' | 'getMyPoints' | 'listRewards' |
   'redeemReward' | 'listMyRedemptions' | 'listAdminMarkets' | 'createMarket' | 'settleMarket' | 'listAdminRewards' |
   'createReward' | 'updateReward' | 'listAdminRedemptions' | 'getFanPoints' | 'adjustFanPoints'>
 
@@ -222,6 +222,14 @@ export function createFazeIdMethods({ call, now }: Context): FazeIdMethods {
         throw new ApiError(409, 'DUPLICATE_PICK', 'You already made a pick for this prediction. Picks are final.')
       }
       market.picks.push({ userId: db.fan.id, optionId, submittedAt: now().toISOString() })
+    }),
+    redeemPrediction: marketId => fan('write', db => {
+      const market = marketOf(db, marketId)
+      const mine = market.picks.find(pick => pick.userId === db.fan.id)
+      if (!market.result || !mine || mine.optionId !== market.result.optionId) {
+        throw new ApiError(409, 'NOT_A_WINNER', 'Only the winning pick can be redeemed.')
+      }
+      addPoints(db, db.fan.id, `prediction:${market.id}`, market.award, `Redeemed prediction: ${market.title}`, 'prediction', now().toISOString())
     }),
 
     getMyPoints: () => fan('read', db => summary(db, db.fan.id)),

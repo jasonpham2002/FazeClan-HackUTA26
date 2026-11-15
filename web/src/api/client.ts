@@ -119,6 +119,8 @@ export interface ApiClient {
   listMarkets(): Promise<PredictionMarket[]>
   /** CONFIRM (Jason): POST /predictions/markets/:id/pick */
   submitPick(marketId: string, optionId: string): Promise<void>
+  /** POST /predictions/markets/:id/redeem — credits a winning pick that is still claimable. */
+  redeemPrediction(marketId: string): Promise<void>
   /** CONFIRM (Jason): GET /me/points */
   getMyPoints(): Promise<PointsSummary>
   /** CONFIRM (Jason): GET /rewards */

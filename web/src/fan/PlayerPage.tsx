@@ -446,7 +446,9 @@ function MatchRow({ match, market }: { match: EsportsMatch; market?: PredictionM
           : match.status === 'live' ? <Badge tone="accent">Live</Badge> : null}
         {market && <PickStateBadge state={pickState(market)} />}
         <Link to={`/matches#${match.id}`} className={`${linkClass} text-sm`}>
-          {market && market.state === 'open' && !market.myPick ? 'Make a prediction' : 'Match details'}
+          {market && pickState(market) === 'claimable'
+            ? 'Redeem points'
+            : market && market.state === 'open' && !market.myPick ? 'Make a prediction' : 'Match details'}
         </Link>
       </div>
     </li>
@@ -466,7 +468,7 @@ function Schedule({ player }: { player: Player }) {
   const { matches, tournaments } = schedule.data
   const marketFor = (id: string) => markets.data?.find(market => market.matchId === id)
   const upcoming = matches.filter(match => match.status === 'upcoming' || match.status === 'live').sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-  const recent = matches.filter(match => match.status === 'finished').sort((a, b) => b.startsAt.localeCompare(a.startsAt)).slice(0, 5)
+  const recent = matches.filter(match => match.status === 'finished').sort((a, b) => b.startsAt.localeCompare(a.startsAt)).slice(0, 12)
   return (
     <Section
       title="Matches and tournament progress"

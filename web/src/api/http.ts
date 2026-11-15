@@ -249,6 +249,9 @@ export function createHttpClient(baseUrl: string): ApiClient {
     submitPick: async (marketId, optionId) => {
       await request('POST', `/predictions/markets/${enc(marketId)}/pick`, { optionId })
     },
+    redeemPrediction: async marketId => {
+      await request('POST', `/predictions/markets/${enc(marketId)}/redeem`)
+    },
     getMyPoints: () => request('GET', '/me/points'),
     listRewards: async () => list(await request('GET', '/rewards'), 'rewards'),
     redeemReward: async (rewardId, idempotencyKey) => {

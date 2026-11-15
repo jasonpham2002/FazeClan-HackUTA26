@@ -81,7 +81,8 @@ export function FazeIdProfile() {
                   <div className="min-w-0">
                     <p className="font-semibold">{market.title}</p>
                     <p className="text-sm text-muted">
-                      Your pick: {market.options.find(option => option.id === market.myPick?.optionId)?.label ?? 'Unknown option'} · {market.award} points if correct
+                      Your pick: {market.options.find(option => option.id === market.myPick?.optionId)?.label ?? 'Unknown option'}
+                      {market.state === 'settled' ? '' : ` · ${market.award} points if correct`}
                     </p>
                   </div>
                   <PickStateBadge state={pickState(market)} />
