@@ -89,7 +89,7 @@ function DemoSignInForm({ role }: { role: Role }) {
           className={inputClass}
           type={gmail ? 'email' : 'tel'}
           autoComplete={gmail ? 'email' : 'tel'}
-          placeholder={gmail ? 'example@gmail.com' : '+1 202 555 0123'}
+          placeholder={gmail ? 'example@gmail.com' : '202-555-0123'}
           required
           disabled={mutation.isPending}
         />

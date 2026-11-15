@@ -18,7 +18,7 @@ export function FanDetailsForm({ account, lockEmail = false, onSave }: {
       if (!given || !family || displayName.length > 80) {
         throw new Error('Enter a first and last name totaling 80 characters or fewer.')
       }
-      if (!phone) throw new Error('Enter a phone number with its country code.')
+      if (!phone) throw new Error('Enter a valid phone number.')
       await onSave({ displayName, email: String(form.get('email') ?? '').trim().toLowerCase(), phone })
     },
     onSuccess: () => window.location.replace('/profile'),
@@ -40,8 +40,8 @@ export function FanDetailsForm({ account, lockEmail = false, onSave }: {
       <Field label={account ? 'Email address' : 'Gmail address'} htmlFor="fan-email-address">
         <input id="fan-email-address" name="email" type="email" className={inputClass} autoComplete="email" defaultValue={account?.email} readOnly={lockEmail} required />
       </Field>
-      <Field label="Phone number" htmlFor="fan-phone-number" hint="Include the country code.">
-        <input id="fan-phone-number" name="phone" type="tel" className={inputClass} autoComplete="tel" defaultValue={account?.phone ?? ''} placeholder="+1 202 555 0123" required />
+      <Field label="Phone number" htmlFor="fan-phone-number">
+        <input id="fan-phone-number" name="phone" type="tel" className={inputClass} autoComplete="tel" defaultValue={account?.phone ?? ''} placeholder="202-555-0123" required />
       </Field>
       {mutation.isError && <Notice tone="danger">{describeError(mutation.error).detail}</Notice>}
       <Button type="submit" variant="primary" disabled={mutation.isPending}>
