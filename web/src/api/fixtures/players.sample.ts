@@ -7,6 +7,7 @@
  * bundle (roster, stats, matches) and Minh's highlight / insight fixtures; the
  * pages need no other change. Live mode never reads this file.
  */
+import { portraitFor } from '../portraits'
 import type {
   EsportsMatch, Highlights, MatchStatLine, Player, PlayerInsight, PlayerStats, TournamentProgress,
 } from '../types'
@@ -44,23 +45,11 @@ function player(n: number, role: string, rosterStatus: Player['rosterStatus'] = 
  */
 const APPROVED_PORTRAITS: Record<string, { file: string; credit: string }> = {}
 
-/**
- * PRIVATE TEST ONLY. Official FaZe bodyshots as published on HLTV's FaZe team page
- * (https://www.hltv.org/team/6667/faze). Copyright HLTV / FaZe Clan; no reuse permission.
- * The files sit in web/public/players/private/, which is git-ignored, and are used only
- * by the local dev server (import.meta.env.DEV), never in a production build. A missing
- * file falls back to the silhouette.
- */
-const PRIVATE_TEST_PORTRAITS = new Set(['player_frozen', 'player_twistzz', 'player_neityu', 'player_jcobbb', 'player_jboen'])
-
 function portrait(handle: string) {
   const id = `player_${handle.toLowerCase()}`
   const entry = APPROVED_PORTRAITS[id]
   if (entry) return { url: `/players/${entry.file}`, credit: entry.credit }
-  if (import.meta.env.DEV && PRIVATE_TEST_PORTRAITS.has(id)) {
-    return { url: `/players/private/${id}.png`, credit: 'HLTV.org (private test image, not cleared for public use)' }
-  }
-  return null
+  return portraitFor(handle)
 }
 
 export const rosterPlayers: Player[] = ['frozen', 'Twistzz', 'Neityu', 'jcobbb', 'JBOEN'].map(handle => ({

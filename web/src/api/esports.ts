@@ -1,3 +1,4 @@
+import { portraitFor } from './portraits'
 import type { Player, PlayerStats } from './types'
 
 interface Evidence {
@@ -37,7 +38,7 @@ export function playerRecord(row: PlayerDto): Player {
   return {
     id: profile.id, handle: profile.handle, displayName: profile.displayName,
     role: profile.role, rosterStatus: profile.rosterStatus, team: 'FaZe',
-    imageUrl: null, imageCredit: null, sourceUrl: profile.rosterSource.url,
+    imageUrl: portraitFor(profile.handle)?.url ?? null, imageCredit: portraitFor(profile.handle)?.credit ?? null, sourceUrl: profile.rosterSource.url,
     checkedAt: row.checkedAt, isDemo: false,
   }
 }
