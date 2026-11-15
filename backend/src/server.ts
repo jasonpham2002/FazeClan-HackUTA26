@@ -9,6 +9,7 @@ import { listenHost, loadConfig, type Config } from './config.ts'
 import { createPool } from './db.ts'
 import { ApiError, fail } from './errors.ts'
 import { registerHighlightRoutes } from './highlights.ts'
+import { registerPlayerInsightRoutes } from './player-insights.ts'
 import { registerInterviewRoutes } from './interviews.ts'
 import { registerPointRoutes } from './points.ts'
 import { registerPredictionRoutes } from './predictions.ts'
@@ -76,6 +77,7 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
   registerRewardRoutes(app, db, auth)
   registerInterviewRoutes(app, db, config.agentToken)
   registerHighlightRoutes(app)
+  registerPlayerInsightRoutes(app, db)
   return app
 }
 
