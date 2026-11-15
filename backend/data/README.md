@@ -65,3 +65,22 @@ Use the returned immutable snapshot ID and its source metadata as AI context. Ex
 Backend TypeScript and the import dry run pass. Real PostgreSQL tests verify repeat imports, malformed/unknown-source rejection, stable snapshots, source-linked read endpoints, player ownership of snapshot IDs, missing coach stats, preserved newer roster records, and retained historical snapshots. Existing backend interview/application tests also pass. These tests use disposable TLS PostgreSQL schemas, not the team's shared Tiger service.
 
 Migration 011 adds `engagement_players`, a view over the imported roster IDs used by the follows API. Apply it with `npm run migrate` before testing follows. See [deployment steps](../DEPLOYMENT.md) to import into the deployed backend's existing schema without switching its user database.
+
+## Sourced match calendar (migration 012)
+
+`faze-calendar-2026-11-15.json` adds FaZe vs Wildcard on 24 November 2026 at 07:00 UTC, and the 1-2 result against Falcons on 3 November 2026. Each record includes its HLTV match link and a Liquipedia timing reference. The IEM Beijing page supplies FaZe's 13-16th placement; the Singapore Stage 1 page supplies the upcoming Swiss stage. Calendar observations were collected separately from the earlier all-time player stats. They are snapshots, not a live feed.
+
+The future match's published lineup is associated with the five active players. Historical associations are restricted to frozen, whose match history was verified. Benched players and coaches are not automatically assigned fixtures. Tournament team lists are the verified subset needed by these records, not a full event field. No individual attendance, recent player metrics, prediction settlement, or other bracket positions are inferred.
+
+```sh
+npm run migrate
+npm run import:esports -- data/faze-cs2-2026-11-15.json --write
+npm run import:calendar -- data/faze-calendar-2026-11-15.json
+npm run import:calendar -- data/faze-calendar-2026-11-15.json --write
+```
+
+The first calendar command is a dry run. Imports validate references and outcomes, write transactionally, and prevent older observations from overwriting newer records. `/esports/matches` returns `{matches}`; `/players/:id/matches` returns `{matches,tournaments}` in the frontend contract. Unknown players return 404; known players without associations return empty lists. Match IDs and option IDs are shared with the prediction reference views. Staff can create a sourced `match_winner` market with reference ID `hltv-match-2400500`; the market must lock no later than its scheduled start. External results never automatically award points.
+
+The roster bundle also corrects frozen's display name to David Čerňanský using his linked HLTV player profile. Reimport it to update the name; existing immutable stat snapshots remain unchanged.
+
+Minh's highlights integration must expose `GET /players/:id/highlights` with `{playerId,fetchedAt,items}`. Installing a YouTube API key alone does not register this route. The frontend also expects `GET /players/:id/insights?snapshotId=...` for analysis. These provider integrations remain owned by Minh.

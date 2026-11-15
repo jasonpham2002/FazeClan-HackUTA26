@@ -11,6 +11,7 @@ npm ci
 npm run check
 npm run migrate
 npm run import:esports -- data/faze-cs2-2026-11-15.json --write
+npm run import:calendar -- data/faze-calendar-2026-11-15.json --write
 ```
 
 Use Node.js 24 or newer. Keep the deployed `.env`, CA certificate, auth secret and ingestion token. Confirm `DATABASE_URL` and `DB_SCHEMA` are the intended service and schema; the local import used `faze_test_johnny`. Do not change the deployed schema merely to match the local one: that would switch which accounts, points, events and rewards are visible. Instead, import the roster into the deployed service's existing schema. The importer does not seed or reset users/rewards.
@@ -49,4 +50,4 @@ This command only reads public endpoints; it needs no credentials. It verifies t
 
 `GET /health` returns `status: "ok"`, `apiVersion: "faze-id-v1"` and the player/prediction/points/reward capabilities only when all required core tables and the player engagement view exist. This distinguishes the updated API from the earlier events-only service. It checks database readiness, not the running worker, SMTP delivery, YouTube integration or AI provider availability.
 
-Migration 011 connects `engagement_players` to the real imported roster, allowing follow requests to validate sourced player IDs. Match and tournament views still require separately verified match/tournament imports; this release does not fabricate a schedule.
+Migration 011 connects `engagement_players` to the real imported roster, allowing follow requests to validate sourced player IDs. Migration 012 adds match/tournament storage, source-attributed calendar routes and prediction reference views. The calendar bundle includes one upcoming fixture, one recent result, and two tournament records. Import it after the roster. It never settles a market automatically.

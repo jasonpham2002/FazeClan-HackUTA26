@@ -1,3 +1,4 @@
+import { registerCalendarRoutes } from './esports-calendar.ts'
 import { pathToFileURL } from 'node:url'
 import cors from '@fastify/cors'
 import Fastify, { LogController } from 'fastify'
@@ -57,7 +58,8 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
     const { rows: [schema] } = await db.query<{ ready: boolean }>(
       `SELECT bool_and(to_regclass(name) IS NOT NULL) AS ready FROM unnest(ARRAY[
         'user','events','point_transactions','prediction_markets','rewards',
-        'esports_players','esports_stat_snapshots','engagement_players'
+        'esports_players','esports_stat_snapshots','engagement_players',
+        'esports_matches','esports_tournaments','engagement_matches','engagement_tournaments'
       ]) AS required(name)`,
     ).catch(() => fail(503, 'DATABASE_UNAVAILABLE', 'The database is unavailable.'))
     if (!schema.ready) fail(503, 'SCHEMA_NOT_READY', 'Run the backend migrations before using this API.')
@@ -65,6 +67,7 @@ export function buildApp(config: Config, db: Pool, sendMail?: SendMail) {
   })
   const auth = registerAuth(app, db, config, sendMail)
   registerPlayerRoutes(app, db)
+  registerCalendarRoutes(app, db)
   registerFanRoutes(app, db, auth)
   registerStaffRoutes(app, db, auth)
   registerPredictionRoutes(app, db, auth)

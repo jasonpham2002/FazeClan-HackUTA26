@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "isDemo": false,
+  "collectedAt": "2026-11-15T12:53:40Z",
+  "limitations": [
+    "Manually collected match snapshots; schedules may change. This is not a live score feed.",
+    "Team fixtures do not guarantee individual attendance; the upcoming association is based on the published lineup. Historical associations are only included where independently checked.",
+    "Published match outcomes do not automatically settle prediction markets; staff must confirm a result.",
+    "UTC timing was cross-checked against Liquipedia match listings. No map-level player statistics are included."
+  ],
+  "tournaments": [
+    {
+      "id": "hltv-event-9303",
+      "name": "PGL Major Singapore 2026 Stage 1",
+      "stage": "Stage 1 - Swiss",
+      "standing": null,
+      "sourceUrl": "https://www.hltv.org/events/9303/pgl-major-singapore-2026-stage-1",
+      "teams": [
+        {
+          "id": "hltv-6667",
+          "label": "FaZe"
+        },
+        {
+          "id": "wildcard",
+          "label": "Wildcard"
+        }
+      ],
+      "playerIds": [
+        "hltv-9960",
+        "hltv-10394",
+        "hltv-21972",
+        "hltv-22383",
+        "hltv-22866"
+      ]
+    },
+    {
+      "id": "hltv-event-8245",
+      "name": "IEM Beijing 2026",
+      "stage": "Finished",
+      "standing": "13-16th",
+      "sourceUrl": "https://www.hltv.org/events/8245/iem-beijing-2026",
+      "teams": [
+        {
+          "id": "hltv-6667",
+          "label": "FaZe"
+        },
+        {
+          "id": "falcons",
+          "label": "Falcons"
+        }
+      ],
+      "playerIds": [
+        "hltv-9960"
+      ]
+    }
+  ],
+  "matches": [
+    {
+      "id": "hltv-match-2400500",
+      "title": "FaZe vs Wildcard",
+      "tournamentId": "hltv-event-9303",
+      "stage": "Swiss round 1 - BO1",
+      "participants": [
+        {
+          "id": "hltv-6667",
+          "label": "FaZe"
+        },
+        {
+          "id": "wildcard",
+          "label": "Wildcard"
+        }
+      ],
+      "startsAt": "2026-11-24T07:00:00Z",
+      "timezone": "Asia/Singapore",
+      "status": "upcoming",
+      "result": null,
+      "sourceUrl": "https://www.hltv.org/matches/2400500/faze-vs-wildcard-pgl-major-singapore-2026-stage-1",
+      "timeSourceUrl": "https://liquipedia.net/counterstrike/Liquipedia%3AMatches/dynamic",
+      "playerIds": [
+        "hltv-9960",
+        "hltv-10394",
+        "hltv-21972",
+        "hltv-22383",
+        "hltv-22866"
+      ]
+    },
+    {
+      "id": "hltv-match-2399994",
+      "title": "FaZe vs Falcons",
+      "tournamentId": "hltv-event-8245",
+      "stage": "Group A lower bracket round 1 - BO3",
+      "participants": [
+        {
+          "id": "hltv-6667",
+          "label": "FaZe"
+        },
+        {
+          "id": "falcons",
+          "label": "Falcons"
+        }
+      ],
+      "startsAt": "2026-11-03T07:00:00Z",
+      "timezone": "Asia/Shanghai",
+      "status": "finished",
+      "result": {
+        "winner": "Falcons",
+        "score": "1-2"
+      },
+      "sourceUrl": "https://www.hltv.org/matches/2399994/faze-vs-falcons-iem-beijing-2026",
+      "timeSourceUrl": "https://liquipedia.net/counterstrike/FaZe_Clan/Matches",
+      "playerIds": [
+        "hltv-9960"
+      ]
+    }
+  ]
+}

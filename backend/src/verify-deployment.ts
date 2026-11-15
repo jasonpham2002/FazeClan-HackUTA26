@@ -17,7 +17,7 @@ export async function verifyDeployment(baseUrl: string) {
   if (health.status !== 'ok' || health.apiVersion !== 'faze-id-v1') throw new Error('/health: expected the current FaZe ID backend; deploy and restart the updated API')
   const roster = await get('/players')
   if (!Array.isArray(roster.players) || !roster.players.length) throw new Error('/players: no imported roster; check DATABASE_URL, DB_SCHEMA and the data import')
-  for (const [path,key] of [['/rewards','rewards'],['/predictions/markets','markets'],['/events','events']]) {
+  for (const [path,key] of [['/esports/matches','matches'],['/rewards','rewards'],['/predictions/markets','markets'],['/events','events']]) {
     if (!Array.isArray((await get(path))[key])) throw new Error(`${path}: missing ${key} list`)
   }
   const player = roster.players.find((row: {rosterStatus?:string}) => row.rosterStatus === 'active') as {id?:unknown} | undefined

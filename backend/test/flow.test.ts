@@ -162,12 +162,11 @@ test('staff publication through fan acceptance with a reclaimed interview job', 
     await db.query(`
       INSERT INTO esports_players(id,handle,display_name,roster_status,checked_at,profile)
       VALUES ('demo-player','Demo','Synthetic test player','active',now(),'{}');
-      CREATE VIEW engagement_matches AS
-        SELECT 'demo-match'::text AS id, '[Replay] CS2 match'::text AS title, now() + interval '1 day' AS starts_at,
-          '[{"id":"a","label":"Demo team A"},{"id":"b","label":"Demo team B"}]'::jsonb AS participants, true AS is_demo;
-      CREATE VIEW engagement_tournaments AS
-        SELECT 'demo-tournament'::text AS id, '[Replay] CS2 tournament'::text AS title,
-          '[{"id":"a","label":"Demo team A"}]'::jsonb AS teams, true AS is_demo;
+      INSERT INTO esports_tournaments(id,checked_at,payload) VALUES ('demo-tournament',now(),
+        '{"name":"[Replay] CS2 tournament","teams":[{"id":"a","label":"Demo team A"}]}'::jsonb);
+      INSERT INTO esports_matches(id,tournament_id,starts_at,checked_at,payload) VALUES
+        ('demo-match','demo-tournament',now() + interval '1 day',now(),
+        '{"title":"[Replay] CS2 match","participants":[{"id":"a","label":"Demo team A"},{"id":"b","label":"Demo team B"}]}'::jsonb);
     `);
     assert.equal(errorCode(await request('PUT', '/me/follows/unknown', firstFan), 404), 'PLAYER_NOT_FOUND');
     for (const method of ['PUT', 'DELETE', 'PUT', 'PUT'] as const) {

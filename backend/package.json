@@ -15,7 +15,8 @@
     "check": "tsc --noEmit",
     "test": "node --env-file-if-exists=.env --test test/*.test.ts",
     "import:esports": "node --env-file-if-exists=.env src/esports-data.ts",
-    "verify:deployment": "node src/verify-deployment.ts"
+    "verify:deployment": "node src/verify-deployment.ts",
+    "import:calendar": "node --env-file-if-exists=.env src/esports-calendar.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.4.3",
