@@ -55,7 +55,7 @@
 
   /* Red Alert: primary actions and current selection only, never decoration. */
   --color-accent: #e4002b;
-  --color-accent-hover: #f41f47;
+  --color-accent-hover: #c70026;
   --color-accent-text: #ff5470;
 
   /* Status colors always appear next to a text label. Danger is kept away
@@ -64,6 +64,25 @@
   --color-warn: #f2c14e;
   --color-danger: #ff8f6b;
   --color-info: #8ec1ff;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f7f3f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #e9dfe2;
+  --color-border: #b7a7ad;
+  --color-border-strong: #7a676e;
+  --color-text: #211b1d;
+  --color-muted: #493e42;
+  --color-subtle: #5d4d53;
+  --color-accent: #bf0025;
+  --color-accent-hover: #99001e;
+  --color-accent-text: #ad0021;
+  --color-ok: #17623f;
+  --color-warn: #754d00;
+  --color-danger: #9d381a;
+  --color-info: #225c96;
 }
 
 /* Page titles: Anton, uppercase. */
@@ -100,7 +119,8 @@ html {
 
 body {
   margin: 0;
-  background: var(--color-bg);
+  /* Transparent so the page backdrop on <html> shows through. */
+  background: transparent;
   color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
@@ -116,13 +136,57 @@ main input, main textarea, main select { min-width: 0; max-width: 100%; }
 nav a[aria-current='page'] { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 6px; }
 @media (max-width: 640px) { main input, main textarea, main select { font-size: 16px; } }
 
+/*
+ * Page backdrop: the toolkit's black-and-white tiger camo, dimmed almost to
+ * black, with a Red Alert glow from the top-right corner. It sits behind all
+ * content and stays put while the page scrolls; panels remain opaque so text
+ * contrast is unaffected.
+ */
+html {
+  min-height: 100%;
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(64rem 38rem at 100% 0%, rgb(228 0 43 / 0.22), transparent 70%),
+    radial-gradient(48rem 30rem at 0% 100%, rgb(228 0 43 / 0.1), transparent 70%),
+    linear-gradient(rgb(17 17 17 / 0.9), rgb(17 17 17 / 0.95)),
+    url('../assets/brand/tiger-camo-bw.jpg');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+:root[data-theme='light'] {
+  background-image:
+    radial-gradient(64rem 38rem at 100% 0%, rgb(228 0 43 / 0.09), transparent 70%),
+    linear-gradient(rgb(247 243 244 / 0.97), rgb(247 243 244 / 0.99)),
+    url('../assets/brand/tiger-camo-bw.jpg');
+}
+
+.staff-header {
+  background: linear-gradient(100deg, #0a0a0a 0%, #141414 40%, #3d000c 75%, #7a0018 100%);
+}
+
+[data-theme='light'] .staff-header {
+  background: linear-gradient(100deg, #ffffff 0%, #fbf7f8 55%, #f3dde2 100%);
+}
+
+.faze-logo {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+[data-theme='light'] .faze-logo {
+  background: #111111;
+}
+
 ::selection {
-  background: rgb(228 0 43 / 0.5);
+  background: var(--color-accent);
   color: #ffffff;
 }
 
 :focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--color-text);
   outline-offset: 2px;
 }
 

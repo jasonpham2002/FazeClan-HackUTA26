@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import fazeLogo from '../assets/brand/faze-logo-on-dark.png'
+import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { EmptyState, ErrorState, linkClass, LoadingState } from '../components/ui/ui'
 
 /**
@@ -35,20 +36,23 @@ export function AdminLayout() {
 
   return (
     <>
-      <header className="border-b border-border bg-surface">
+      <header className="staff-header border-b-2 border-accent">
         <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 sm:px-6">
           <NavLink to="/admin" end className="flex items-center gap-5">
             {/* Toolkit logo for dark backgrounds, unmodified; brand minimum width is 40px. */}
-            <img src={fazeLogo} alt="FaZe Clan" width={60} height={40} className="h-10 w-auto" />
+            <span className="faze-logo"><img src={fazeLogo} alt="FaZe Clan" width={60} height={40} className="h-10 w-auto" /></span>
             <span className="title-display text-xl">Staff dashboard</span>
           </NavLink>
           <span className="text-[0.8125rem] text-muted">Independent concept for FaZe Clan</span>
           <Link to="/" className={linkClass}>Fan experience</Link>
-          {me.data && (
-            <span className="ml-auto text-[0.8125rem] text-muted">
-              Signed in as <span className="text-text">{me.data.displayName ?? me.data.email}</span> · {me.data.role}
-            </span>
-          )}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+            {me.data && (
+              <span className="text-[0.8125rem] text-muted">
+                Signed in as <span className="text-text">{me.data.displayName ?? me.data.email}</span> · {me.data.role}
+              </span>
+            )}
+            <ThemeToggle />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 pt-6 pb-16 sm:px-6">{body}</main>

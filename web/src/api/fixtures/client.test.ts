@@ -133,4 +133,17 @@ describe('fixture API', () => {
     expect(interview.published).toBeNull()
     expect(interview.hasUnpublishedChanges).toBe(true)
   })
+
+  it('lists a staff-created event for fans after the event is published', async () => {
+    const { api, reopen } = setup()
+    const { id: sourceId, ...details } = await api.getAdminEvent('evt_1')
+    const event = await api.createEvent({ ...details, title: 'New fan event', publicationStatus: 'draft' })
+    const fan = reopen()
+    expect((await fan.listFanEvents()).map(({ id }) => id)).not.toContain(event.id)
+    expect(event.id).not.toBe(sourceId)
+
+    await api.updateEvent(event.id, { ...details, title: event.title, publicationStatus: 'published' })
+    expect(await fan.listFanEvents()).toContainEqual(expect.objectContaining({ id: event.id, title: event.title }))
+    expect(await fan.getFanEvent(event.id)).toMatchObject({ id: event.id, publicationStatus: 'published' })
+  })
 })
