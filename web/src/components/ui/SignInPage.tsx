@@ -118,7 +118,11 @@ function EmailSignInForm({ staff, linkFailed }: { staff: boolean; linkFailed: bo
       if (email.trim() && !mutation.isPending) mutation.mutate(email.trim().toLowerCase())
     }}>
       <p className="text-muted">Enter your email to get a secure sign-in link.</p>
-      <Field label="Email address" htmlFor="sign-in-email">
+      <Field
+        label="Email address"
+        htmlFor="sign-in-email"
+        hint="Use an @example.test address (e.g. fan@example.test or staff@example.test)."
+      >
         <input
           id="sign-in-email"
           className={inputClass}
@@ -139,7 +143,15 @@ function EmailSignInForm({ staff, linkFailed }: { staff: boolean; linkFailed: bo
       {mutation.isError && (
         <Notice tone="danger">Could not send the sign-in link. {describeError(mutation.error).detail}</Notice>
       )}
-      {mutation.isSuccess && <Notice tone="ok">Check your email for the sign-in link.</Notice>}
+      {mutation.isSuccess && (
+        <Notice tone="ok">
+          Check your email for the sign-in link (or open{' '}
+          <a className="font-semibold underline" href="http://127.0.0.1:8025" target="_blank" rel="noopener noreferrer">
+            Mailpit
+          </a>{' '}
+          locally).
+        </Notice>
+      )}
       <Button type="submit" variant="primary" disabled={mutation.isPending}>
         {mutation.isPending ? 'Sending…' : mutation.isSuccess ? 'Resend sign-in link' : 'Send sign-in link'}
       </Button>

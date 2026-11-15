@@ -200,5 +200,14 @@ describe('fixture API', () => {
     await api.updateEvent(event.id, { ...details, title: event.title, publicationStatus: 'published' })
     expect(await fan.listFanEvents()).toContainEqual(expect.objectContaining({ id: event.id, title: event.title }))
     expect(await fan.getFanEvent(event.id)).toMatchObject({ id: event.id, publicationStatus: 'published' })
+    expect((await api.getInterview(event.id)).published?.versionNumber).toBe(1)
+  })
+
+  it('records attendance only for accepted applications', async () => {
+    const { api, reopen } = setup()
+    await expect(api.recordAttendance('app_maya')).rejects.toMatchObject({ status: 409 })
+    await api.recordAttendance('app_alex')
+    const updated = await reopen().getApplication('app_alex')
+    expect(updated.activity.some((item) => item.type === 'attendance' && item.eventId === updated.event.id)).toBe(true)
   })
 })

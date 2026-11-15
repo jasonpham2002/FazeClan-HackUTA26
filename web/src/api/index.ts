@@ -30,7 +30,6 @@ export function resetFixtureData() {
   localStorage.removeItem(FAILURE_KEY)
 }
 
-export const api: ApiClient =
-  dataSource === 'live'
-    ? createHttpClient((import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, ''))
-    : createFixtureClient({ storage: localStorage, simulatedFailure: getSimulatedFailure })
+export const api: ApiClient = dataSource === 'live'
+  ? createHttpClient((import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, ''))
+  : createFixtureClient({ storage: localStorage, simulatedFailure: getSimulatedFailure })

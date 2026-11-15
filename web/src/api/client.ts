@@ -75,6 +75,8 @@ export interface ApiClient {
   getApplication(id: string): Promise<ApplicationDetail>
   /** POST /admin/applications/:id/decision */
   postDecision(id: string, input: DecisionInput): Promise<void>
+  /** POST /admin/applications/:id/attendance */
+  recordAttendance(id: string): Promise<void>
   /** GET /admin/events/:id/analytics */
   getAnalytics(eventId: string): Promise<Analytics>
 }

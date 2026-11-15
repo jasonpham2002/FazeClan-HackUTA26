@@ -53,4 +53,26 @@ describe('live fan adapter', () => {
     await expect(api.simulateFanCall('app', 'completed')).rejects.toMatchObject({ code: 'FIXTURE_ONLY' })
     expect(fetchMock).not.toHaveBeenCalled()
   })
+  it('updates fan profile, falls back when interview draft is null, and records attendance', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      id: 'user_1', email: 'fan@example.test', displayName: 'FaZe Fan', phone: '+12025550199', role: 'fan',
+    })))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      draft: null, draftUpdatedAt: '2026-04-19T12:00:00.000Z', publishedVersion: null,
+    })))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ recorded: true })))
+    const api = createHttpClient('/api')
+    await api.updateFanProfile({ displayName: 'FaZe Fan', phone: '+12025550199' })
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/me', expect.objectContaining({
+      method: 'PATCH', credentials: 'include', body: JSON.stringify({ displayName: 'FaZe Fan', phone: '+12025550199' }),
+    }))
+    const interview = await api.getInterview('evt_1')
+    expect(interview.draft.questions).toHaveLength(4)
+    expect(interview.hasUnpublishedChanges).toBe(true)
+    await api.recordAttendance('app_1')
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/admin/applications/app_1/attendance', expect.objectContaining({
+      method: 'POST', credentials: 'include', body: JSON.stringify({}),
+    }))
+  })
 })

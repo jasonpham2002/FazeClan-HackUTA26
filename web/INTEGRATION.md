@@ -12,7 +12,15 @@ npm.cmd ci
 npm.cmd run dev -- --host 127.0.0.1 --port 5189 --strictPort
 ```
 
-Open http://127.0.0.1:5189. On other platforms use `npm` instead of `npm.cmd`. Source mode defaults to explicitly labeled fixtures; no backend is required.
+Alternatively, on macOS (`zsh`):
+
+```zsh
+cd web
+npm ci
+npm run dev -- --host 127.0.0.1 --port 5189 --strictPort
+```
+
+Open http://127.0.0.1:5189. Source mode defaults to explicitly labeled fixtures; no backend is required.
 
 1. Open the event and submit an application with consent. Use the demo profile; `/sign-in` only changes its fictional details.
 2. Confirm the destination and select **Simulate call request**.
@@ -37,45 +45,41 @@ The fixture has two explicitly simulated personas: Demo Staff for staff pages an
 
 New applications pin the latest published interview. Draft edits do not change existing applications. A simulated completion uses the application's pinned questions and writes synthetic answers with valid transcript references into the staff dashboard.
 
-## Jason: shared API contract
+## Run with the local backend
 
-Use `src/api/types.ts`, `src/api/client.ts`, and `src/api/http.ts` as the combined frontend contract. `frontend/API-HANDOFF.md` describes the older standalone prototype, whose shapes differ. Reconcile here before connecting a real server.
+Follow [backend setup](../backend/README.md) and run the migrations before starting the API and worker. Migration 004 stores event time zones and defaults existing events to `America/Chicago`. Keep Mailpit running on loopback.
 
-Set `VITE_DATA_SOURCE=live` and `VITE_API_BASE_URL` in `.env.local`. For same-origin hosting, `/api` is a suitable base if the reverse proxy forwards it. For a separate backend origin, configure credentialed CORS. Confirm CSRF/session protections before exposing authenticated writes. Use `VITE_SIGN_IN_URL` for the backend's real sign-in/profile URL. Vite variables are public; no credentials or provider keys belong in them.
+Configure `web/.env.local`:
 
-Fan endpoints added to the existing staff adapter:
+```dotenv
+VITE_DATA_SOURCE=live
+VITE_API_BASE_URL=http://127.0.0.1:3001
+```
 
-| Method/path (relative to API base) | Body | Direct JSON success shape |
-|---|---|---|
-| GET /me | — | `Me`: id, email, displayName, role, optional phone |
-| GET /events | — | `EventRecord[]`, published events only |
-| GET /events/:id | — | `EventRecord` |
-| GET /me/applications | — | `FanApplication[]`, current user's applications |
-| GET /applications/:id | — | `FanApplication`, owned by current user |
-| POST /events/:id/applications | `{consentVersion:'ai-interview-v1',consentAccepted:true}` | `{id}` |
-| POST /applications/:id/call | `{}` | Any successful JSON/empty response; client refetches |
-| POST /applications/:id/accept | `{}` | Any successful JSON/empty response; client refetches |
-| GET /me/activity | — | `ActivityEvent[]`, current user's sourced activity |
+Use Vite on `127.0.0.1:5189` and the same hostname for the API. The API trusts this frontend origin by default. Include it in `APP_ORIGINS` if overriding the default. Open `/sign-in`, request a magic link for an `@example.test` address, and open the link from Mailpit in the same browser profile. Use separate profiles or private sessions for fan and staff accounts. The seeded reviewer is `staff@example.test`.
 
-Collection responses in this shared prototype are **direct arrays**. Staff application lists retain Khoi's existing `{items,page,pageSize,total}` envelope. If fan history must be paginated, agree the response and update the central adapter/screens; the standalone cursor envelope is not silently accepted here.
+The [backend guide](../backend/README.md) describes the HTTP contract. The client in `src/api/http.ts` translates server responses into the shapes used by the fan and staff screens. The server handles cookies, role and ownership checks, version pinning, duplicate requests, and invitation capacity. In live mode, **Run sample interview** writes synthetic transcript and result events through the local worker. Minh and Tuong own the Muse integration.
 
-Key differences from the standalone prototype:
+To run the live Chrome smoke test against a fresh, seeded disposable schema, start the API and worker on port `3101` with that same schema. Start Vite with `VITE_API_BASE_URL=http://127.0.0.1:3101`.
 
-- `Me` has top-level displayName/email/phone rather than a nested profile.
-- Event uses `title`, `startsAt`, `timezone`, `publicationStatus` and `applicationDeadline` from Khoi's event editor.
-- `FanApplication` embeds the event, fan-safe profile, latest call, pinned version metadata, and optional invitation state. It deliberately excludes transcripts, private staff reasons, and review notes.
-- Activity uses `eventTitle`, `isDemo`, and types `application`, `invitation_accepted`, `attendance`, matching the dashboard.
-- Current applications are discovered from `/me/applications`; a new tab does not rely on a remembered application ID.
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node scripts/live-smoke.mjs
+```
 
-Backend must independently enforce ownership, role permissions, normalized/verified or allowlisted recipients, consent, published/closed event rules, application uniqueness, one active call, invitation expiry/capacity, immutable question versions, and concurrent decision/acceptance consistency. Client-side checks and the fixture store are not security controls.
-
-`setFixtureFan` and `simulateFanCall` are explicitly fixture-only interface methods; their live implementations reject without sending any request. Minh and Tuong's real agent integration still belongs behind the backend's call endpoint. No real FaceTime/Muse call is implemented by this merge.
+The smoke test creates an application, publishes a new version, and makes a staff decision in that schema. Run it against a fresh test schema for each rehearsal.
 
 ## Verification
 
 ```powershell
 npm.cmd test
 npm.cmd run build
+```
+
+Alternatively, on macOS (`zsh`):
+
+```zsh
+npm test
+npm run build
 ```
 
 The fixture integration suite checks a new fan application appearing in the staff list, question version pinning, missed-call retry, synthetic transcript evidence, private-note exclusion, ownership, staff decisions, acceptance counts, capacity conflicts, and persistence through an older-store upgrade.
@@ -88,4 +92,10 @@ $env:BROWSER_CHANNEL = 'chrome'
 node scripts/connected-smoke.mjs
 ```
 
-Verified in headless Chrome: the complete flow across separate fan/staff tabs without manually reloading, persistence after reload, and fan layouts at 320, 390, 768, and 1440px. Live backend, real authentication, and actual iPhone calls remain unverified.
+Or on macOS:
+
+```zsh
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs BROWSER_CHANNEL=chrome node scripts/connected-smoke.mjs
+```
+
+Verified in headless Chrome: the complete flow across separate fan/staff tabs without manually reloading, persistence after reload, and fan layouts at 320, 390, 768, and 1440px. The live smoke test covers Mailpit authentication, persisted staff and fan operations, and the sample interview worker.

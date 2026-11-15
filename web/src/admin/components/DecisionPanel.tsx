@@ -23,6 +23,17 @@ export function DecisionPanel({ app }: { app: ApplicationDetail }) {
   const current = app.decision
   const locked = app.status === 'accepted'
   const showForm = !locked && (!current || editing)
+  const attended = app.activity.some(
+    (item) => item.type === 'attendance' && (item.eventId ? item.eventId === app.event.id : item.eventTitle === app.event.title),
+  )
+
+  const attendance = useMutation({
+    mutationFn: () => api.recordAttendance(app.id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['application', app.id] })
+      void queryClient.invalidateQueries({ queryKey: ['fan', 'activity'] })
+    },
+  })
 
   const mutation = useMutation({
     mutationFn: (input: DecisionInput) => api.postDecision(app.id, input),
@@ -84,7 +95,29 @@ export function DecisionPanel({ app }: { app: ApplicationDetail }) {
         {justSaved && !mutation.isPending && !showForm && <Notice tone="ok">Decision saved.</Notice>}
 
         {locked && (
-          <Notice tone="info">The applicant has accepted this invitation, so the decision can no longer be changed here.</Notice>
+          <>
+            <Notice tone="info">The applicant has accepted this invitation, so the decision can no longer be changed here.</Notice>
+            {attended ? (
+              <Notice tone="ok">Attendance confirmed for this event.</Notice>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {attendance.isError && (
+                  <Notice tone="danger">
+                    <strong>Attendance was not recorded.</strong> {describeError(attendance.error).detail}
+                  </Notice>
+                )}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="self-start"
+                  disabled={attendance.isPending}
+                  onClick={() => attendance.mutate()}
+                >
+                  {attendance.isPending ? 'Recording…' : 'Confirm attendance'}
+                </Button>
+              </div>
+            )}
+          </>
         )}
 
         {current && !locked && !editing && (

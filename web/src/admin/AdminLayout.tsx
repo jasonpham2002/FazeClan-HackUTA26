@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, NavLink, Outlet, useMatch, useSearchParams } from 'react-router-dom'
-import { api, ApiError, dataSource } from '../api'
+import { api, ApiError } from '../api'
 import { AccessLayout } from '../components/ui/AccessLayout'
-import { Icon } from '../components/ui/Icon'
 import { AccountMenu } from '../components/ui/AccountMenu'
+import { Icon } from '../components/ui/Icon'
+import { SessionButton } from '../components/ui/SessionButton'
 import { EmptyState, ErrorState, linkClass, LoadingState } from '../components/ui/ui'
 
 /**
@@ -14,15 +15,24 @@ export function AdminLayout() {
   const me = useQuery({ queryKey: ['me'], queryFn: api.getMe })
   const overview = useMatch('/admin')
   const eventRoute = useMatch('/admin/events/:eventId/*')
+  const eventId = eventRoute?.params.eventId
+  const appRoute = useMatch('/admin/applications/:appId')
   const [params] = useSearchParams()
   const events = useQuery({
     queryKey: ['events'],
     queryFn: api.listAdminEvents,
-    enabled: me.isSuccess && me.data.role === 'staff' && Boolean(overview || eventRoute),
+    enabled: me.isSuccess && me.data.role === 'staff' && Boolean(overview || (eventId && eventId !== 'new')),
+  })
+  const appDetail = useQuery({
+    queryKey: ['application', appRoute?.params.appId ?? ''],
+    queryFn: () => api.getApplication(appRoute!.params.appId!),
+    enabled: me.isSuccess && me.data.role === 'staff' && Boolean(appRoute?.params.appId),
   })
   const selected = overview
     ? events.data?.find(event => event.id === params.get('event')) ?? events.data?.[0]
-    : events.data?.find(event => event.id === eventRoute?.params.eventId)
+    : eventId && eventId !== 'new'
+      ? events.data?.find(event => event.id === eventId) ?? { id: eventId, title: 'Event' }
+      : appDetail.data?.event
   const overviewLink = selected ? `/admin?event=${encodeURIComponent(selected.id)}` : '/admin'
 
   let body
@@ -39,7 +49,19 @@ export function AdminLayout() {
         <ErrorState error={me.error} onRetry={() => me.refetch()} />
       )
   } else if (me.data.role !== 'staff') {
-    body = <EmptyState title="Access denied">This area is for event staff. Your account is a fan account.</EmptyState>
+    body = (
+      <EmptyState title="Access denied">
+        <div className="space-y-3">
+          <p>This area is for event staff. Your account is a fan account.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <SessionButton role={me.data.role} />
+            <Link to="/sign-in?role=staff" className={linkClass}>
+              Switch account
+            </Link>
+          </div>
+        </div>
+      </EmptyState>
+    )
   } else {
     body = <Outlet />
   }
@@ -65,11 +87,9 @@ export function AdminLayout() {
             </div>
           )}
           <div className="access-sidebar-bottom">
-            {dataSource === 'fixtures' && (
-              <nav aria-label="Demo navigation" className="access-nav">
-                <Link to="/"><Icon name="arrowRight" /> Fan experience</Link>
-              </nav>
-            )}
+            <nav aria-label="Demo navigation" className="access-nav">
+              <Link to="/"><Icon name="arrowRight" /> Fan experience</Link>
+            </nav>
             <p className="access-credit">Independent FaZe Clan concept</p>
           </div>
         </>
