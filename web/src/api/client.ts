@@ -16,6 +16,19 @@ import type {
   FixtureFanInput,
   ActivityEvent,
   InsightsReport,
+  AdminMarket,
+  EsportsMatch,
+  Highlights,
+  MarketInput,
+  Player,
+  PlayerInsight,
+  PlayerSchedule,
+  PlayerStats,
+  PointsSummary,
+  PredictionMarket,
+  Redemption,
+  Reward,
+  RewardInput,
 } from './types'
 
 export class ApiError extends Error {
@@ -82,4 +95,54 @@ export interface ApiClient {
   getAnalytics(eventId: string): Promise<Analytics>
   /** CONFIRM (Jason): GET /admin/insights — turnout, returning fans and interview patterns across all events. */
   getInsights(): Promise<InsightsReport>
+
+  // ----- FaZe ID. Every route below is proposed in the team docs and not built yet. -----
+  /** CONFIRM (Johnny): GET /players */
+  listPlayers(): Promise<Player[]>
+  /** CONFIRM (Johnny): GET /players/:id */
+  getPlayer(id: string): Promise<Player>
+  /** CONFIRM (Johnny): GET /players/:id/stats */
+  getPlayerStats(id: string): Promise<PlayerStats>
+  /** CONFIRM (Johnny): GET /players/:id/matches */
+  getPlayerSchedule(id: string): Promise<PlayerSchedule>
+  /** CONFIRM (Johnny): GET /esports/matches — the full calendar; not in the proposed endpoint list. */
+  listMatches(): Promise<EsportsMatch[]>
+  /** CONFIRM (Minh): GET /players/:id/highlights */
+  getPlayerHighlights(id: string): Promise<Highlights>
+  /** CONFIRM (Minh): GET /players/:id/insights?snapshotId= */
+  getPlayerInsight(id: string, snapshotId: string): Promise<PlayerInsight>
+  /** CONFIRM (Jason): GET /me/follows — followed player IDs. */
+  listFollows(): Promise<string[]>
+  /** CONFIRM (Jason): PUT or DELETE /me/follows/:playerId */
+  setFollow(playerId: string, following: boolean): Promise<void>
+  /** CONFIRM (Jason): GET /predictions/markets — includes the signed-in fan's pick. */
+  listMarkets(): Promise<PredictionMarket[]>
+  /** CONFIRM (Jason): POST /predictions/markets/:id/pick */
+  submitPick(marketId: string, optionId: string): Promise<void>
+  /** CONFIRM (Jason): GET /me/points */
+  getMyPoints(): Promise<PointsSummary>
+  /** CONFIRM (Jason): GET /rewards */
+  listRewards(): Promise<Reward[]>
+  /** CONFIRM (Jason): POST /rewards/:id/redeem with an Idempotency-Key header. */
+  redeemReward(rewardId: string, idempotencyKey: string): Promise<void>
+  /** CONFIRM (Jason): GET /me/redemptions */
+  listMyRedemptions(): Promise<Redemption[]>
+  /** CONFIRM (Jason): GET /admin/prediction-markets — not in the proposed endpoint list. */
+  listAdminMarkets(): Promise<AdminMarket[]>
+  /** CONFIRM (Jason): POST /admin/prediction-markets */
+  createMarket(input: MarketInput): Promise<void>
+  /** CONFIRM (Jason): POST /admin/prediction-markets/:id/settle */
+  settleMarket(id: string, input: { optionId: string; sourceUrl: string }): Promise<void>
+  /** CONFIRM (Jason): GET /admin/rewards — not in the proposed endpoint list. */
+  listAdminRewards(): Promise<Reward[]>
+  /** CONFIRM (Jason): POST /admin/rewards */
+  createReward(input: RewardInput): Promise<void>
+  /** CONFIRM (Jason): PATCH /admin/rewards/:id */
+  updateReward(id: string, input: RewardInput): Promise<void>
+  /** CONFIRM (Jason): GET /admin/redemptions — not in the proposed endpoint list. */
+  listAdminRedemptions(): Promise<Redemption[]>
+  /** CONFIRM (Jason): GET /admin/users/:id/points — not in the proposed endpoint list. */
+  getFanPoints(userId: string): Promise<PointsSummary>
+  /** CONFIRM (Jason): POST /admin/users/:id/point-adjustments */
+  adjustFanPoints(userId: string, input: { delta: number; reason: string }): Promise<void>
 }

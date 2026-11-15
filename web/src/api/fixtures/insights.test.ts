@@ -19,9 +19,9 @@ describe('fixture insights', () => {
     const api = createFixtureClient({ storage: memoryStorage(), delayMs: 0, now })
     const report = await api.getInsights()
     expect(report.includesDemoData).toBe(true)
-    expect(report.events.map((item) => item.event.id)).toEqual(['evt_1', 'evt_houston', 'evt_austin'])
+    expect(report.events.map((item) => item.event.id)).toEqual(['evt_exclusive', 'evt_1', 'evt_houston', 'evt_austin'])
 
-    const [current, houston, austin] = report.events
+    const [, current, houston, austin] = report.events
     expect(austin.funnel).toEqual({ applied: 12, interviewed: 11, invited: 10, accepted: 9, attended: 7 })
     expect(houston.funnel).toEqual({ applied: 15, interviewed: 14, invited: 13, accepted: 12, attended: 8 })
     expect(houston.audience.returningFans).toBe(3)
@@ -57,7 +57,7 @@ describe('fixture insights', () => {
     old.applications = old.applications.filter((app) => app.event.id === 'evt_1')
     storage.setItem(FIXTURE_DB_KEY, JSON.stringify(old))
     const api = createFixtureClient({ storage, delayMs: 0, now })
-    expect((await api.listAdminEvents()).map((event) => event.id)).toEqual(['evt_1', 'evt_austin', 'evt_houston'])
+    expect((await api.listAdminEvents()).map((event) => event.id)).toEqual(['evt_1', 'evt_austin', 'evt_houston', 'evt_exclusive'])
     expect((await api.getInsights()).retention.cohorts).toHaveLength(2)
   })
 })

@@ -75,6 +75,8 @@ export function AdminLayout() {
           <nav aria-label="Staff navigation" className="access-nav">
             <NavLink to={overviewLink} end><Icon name="dashboard" /> Dashboard</NavLink>
             {me.isSuccess && me.data.role === 'staff' && <NavLink to="/admin/insights"><Icon name="chart" /> Insights</NavLink>}
+            {me.isSuccess && me.data.role === 'staff' && <NavLink to="/admin/markets"><Icon name="trophy" /> Predictions</NavLink>}
+            {me.isSuccess && me.data.role === 'staff' && <NavLink to="/admin/rewards"><Icon name="gift" /> Rewards</NavLink>}
             {me.isSuccess && me.data.role === 'staff' && <NavLink to="/admin/events/new"><Icon name="plus" /> New event</NavLink>}
           </nav>
           {me.isSuccess && me.data.role === 'staff' && selected && (

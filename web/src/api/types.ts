@@ -59,6 +59,8 @@ export interface EventInput {
   capacity: number
   applicationDeadline: string
   publicationStatus: PublicationStatus
+  /** CONFIRM (Jason): points needed before a fan may apply. Absent or 0 means open to everyone. */
+  minimumPoints?: number
 }
 
 export interface EventRecord extends EventInput {
@@ -372,4 +374,218 @@ export interface Suggestion {
   tone: 'ok' | 'info' | 'warn'
   title: string
   detail: string
+}
+
+// ---------- FaZe ID: players, stats and matches ----------
+// CONFIRM (Johnny): every shape in this block follows the proposal in Minh.md
+// (Johnny's data assignment). Missing numbers are null, never 0.
+
+export type RosterStatus = 'active' | 'benched' | 'former' | 'coach'
+
+export interface SourceRef {
+  id: string
+  label?: string
+  url: string
+  retrievedAt: string
+}
+
+export interface Player {
+  id: string
+  handle: string
+  displayName: string | null
+  role: string | null
+  rosterStatus: RosterStatus
+  team: string
+  imageUrl: string | null
+  imageCredit: string | null
+  sourceUrl: string | null
+  /** When the roster entry was last checked by hand. Not a live feed. */
+  checkedAt: string
+  isDemo: boolean
+}
+
+export interface Metric {
+  value: number | null
+  /** e.g. the source's rating version. */
+  definition?: string
+  unit?: string
+}
+
+export type StatKey = 'rating' | 'kd' | 'adr' | 'headshotPercent'
+
+/** CONFIRM (Johnny): one match's stat line. Optional; the chart and standout view hide without it. */
+export interface MatchStatLine {
+  matchId: string
+  opponent: string
+  tournament: string
+  playedAt: string
+  result: 'win' | 'loss' | null
+  score: string | null
+  mapsPlayed: number | null
+  rating: number | null
+  kd: number | null
+  adr: number | null
+  headshotPercent: number | null
+  sourceUrl: string | null
+}
+
+export interface PlayerStats {
+  playerId: string
+  snapshotId: string
+  period: { label: string; start: string; end: string }
+  mapsPlayed: number | null
+  metrics: Record<StatKey, Metric>
+  recentMatches: MatchStatLine[]
+  sources: SourceRef[]
+  retrievedAt: string
+  isDemo: boolean
+}
+
+export type MatchStatus = 'upcoming' | 'live' | 'finished' | 'canceled'
+
+export interface EsportsMatch {
+  id: string
+  tournament: { id: string; name: string }
+  stage: string | null
+  /** Team names, FaZe first when known. */
+  participants: string[]
+  startsAt: string
+  timezone: string
+  status: MatchStatus
+  /** Externally reported; separate from a staff-confirmed prediction settlement. */
+  result: { winner: string; score: string | null } | null
+  sourceUrl: string | null
+  refreshedAt: string
+  isDemo: boolean
+}
+
+export interface TournamentProgress {
+  id: string
+  name: string
+  stage: string | null
+  standing: string | null
+  sourceUrl: string | null
+  refreshedAt: string
+  isDemo: boolean
+}
+
+export interface PlayerSchedule {
+  matches: EsportsMatch[]
+  tournaments: TournamentProgress[]
+}
+
+// ---------- FaZe ID: highlights and AI analysis ----------
+// CONFIRM (Minh): shapes follow Johnny.md (Minh's integration assignment).
+
+export interface HighlightVideo {
+  videoId: string
+  title: string
+  channelTitle: string
+  publishedAt: string
+  thumbnailUrl: string | null
+  watchUrl: string
+  /** CONFIRM (Minh): optional verified moment to start playback at. */
+  startSeconds?: number | null
+  source: string
+}
+
+export interface Highlights {
+  playerId: string
+  fetchedAt: string | null
+  items: HighlightVideo[]
+  isDemo?: boolean
+}
+
+export interface PlayerInsight {
+  playerId: string
+  snapshotId: string
+  generatedAt: string | null
+  status: 'ready' | 'pending' | 'unavailable'
+  summary: string
+  observations: { text: string; metricRefs: string[]; sourceIds: string[] }[]
+  limitations: string[]
+  isDemo?: boolean
+}
+
+// ---------- FaZe ID: follows, predictions, points and rewards ----------
+// CONFIRM (Jason): shapes follow the tables in Jason.md.
+
+export type MarketType = 'match_winner' | 'placement'
+export type MarketState = 'open' | 'locked' | 'settled' | 'void'
+
+export interface PredictionMarket {
+  id: string
+  type: MarketType
+  title: string
+  matchId: string | null
+  tournamentId: string | null
+  options: { id: string; label: string }[]
+  /** Server time decides locking; a client countdown is informational only. */
+  locksAt: string
+  /** Fixed points for a correct pick. Entry is free. */
+  award: number
+  state: MarketState
+  myPick: { optionId: string; submittedAt: string } | null
+  result: { optionId: string; sourceUrl: string; settledAt: string } | null
+  isDemo?: boolean
+}
+
+export interface AdminMarket extends PredictionMarket {
+  pickCount: number
+  picksByOption: Record<string, number>
+}
+
+export interface MarketInput {
+  type: MarketType
+  title: string
+  matchId: string | null
+  tournamentId: string | null
+  options: string[]
+  locksAt: string
+  award: number
+}
+
+export type PointSource = 'prediction' | 'attendance' | 'redemption' | 'adjustment' | 'content_claim'
+
+export interface PointTransaction {
+  id: string
+  delta: number
+  reason: string
+  sourceType: PointSource
+  createdAt: string
+}
+
+/** Balance and entries come only from the backend ledger. */
+export interface PointsSummary {
+  balance: number
+  entries: PointTransaction[]
+}
+
+export type RewardKind = 'merch' | 'raffle' | 'early_access' | 'priority'
+
+export interface RewardInput {
+  title: string
+  description: string
+  kind: RewardKind
+  cost: number
+  /** null means not stock-limited. */
+  stock: number | null
+  active: boolean
+  terms: string
+}
+
+export interface Reward extends RewardInput {
+  id: string
+  isDemo: boolean
+}
+
+export interface Redemption {
+  id: string
+  rewardId: string
+  rewardTitle: string
+  cost: number
+  status: 'requested' | 'fulfilled' | 'canceled'
+  createdAt: string
+  /** Staff views only. */
+  fan?: PersonRef
 }

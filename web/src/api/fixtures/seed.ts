@@ -39,6 +39,8 @@ export interface Db {
   events: EventRecord[]
   interviews: Record<string, InterviewEntry>
   applications: StoredApplication[]
+  /** Follows, predictions, points and rewards; added on load by addFazeId. */
+  fazeId?: import('./fazeid').FazeIdState
 }
 
 const EVENT_ID = 'evt_1'

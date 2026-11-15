@@ -13,6 +13,7 @@ import type {
 } from '../types'
 import { addSampleHistory, createSeed, DEMO_FAN_CONTACT, DEMO_STAFF_CONTACT, type Db, type InterviewEntry, type StoredApplication } from './seed'
 import { buildInsights, type InsightsSource } from '../../lib/insights'
+import { addFazeId, awardAttendance, createFazeIdMethods, pointsBalance } from './fazeid'
 import { eventUnavailable, normalizePhone } from '../../fan/logic'
 import type { FanApplication, ActivityEvent } from '../types'
 
@@ -69,6 +70,8 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
           }
           // Older stores predate the past sample events used by Insights.
           addSampleHistory(parsed)
+          // Older stores predate FaZe ID (predictions, points, rewards, the points-gated event).
+          addFazeId(parsed)
           return parsed
         }
       } catch {
@@ -76,6 +79,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
       }
     }
     const seed = createSeed()
+    addFazeId(seed)
     storage.setItem(FIXTURE_DB_KEY, JSON.stringify(seed))
     return seed
   }
@@ -292,6 +296,11 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
       const event = db.events.find(event => event.id === eventId) ?? notFound('Event')
       const unavailable = eventUnavailable(event, now().getTime())
       if (unavailable) throw new ApiError(409, 'APPLICATIONS_CLOSED', unavailable)
+      // Points unlock eligibility; applying never spends them.
+      const needed = event.minimumPoints ?? 0
+      if (needed > 0 && pointsBalance(db, db.fan.id) < needed) {
+        throw new ApiError(403, 'NOT_ELIGIBLE', `This event needs ${needed} FaZe ID points to apply. Nothing was charged.`)
+      }
       if (!consent) throw new ApiError(422, 'CONSENT_REQUIRED', 'Agree to the AI interview before applying.')
       if (!db.fan.phone || !normalizePhone(db.fan.phone)) throw new ApiError(422, 'PHONE_REQUIRED', 'Add a valid phone number to your profile.')
       const duplicate = db.applications.find(app => app.applicant.id === db.fan.id && app.event.id === eventId)
@@ -471,6 +480,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
         if (!app.activity.some((item) => item.type === 'attendance' && (item.eventId ? item.eventId === app.event.id : item.eventTitle === app.event.title))) {
           recordActivity(app, 'attendance')
         }
+        awardAttendance(db, app, now().toISOString())
       }),
 
     getAnalytics: (eventId) =>
@@ -496,5 +506,7 @@ export function createFixtureClient(options: FixtureOptions): ApiClient {
       }),
 
     getInsights: () => staffCall('read', (db) => buildInsights(insightsSource(db))),
+
+    ...createFazeIdMethods({ call, now }),
   }
 }

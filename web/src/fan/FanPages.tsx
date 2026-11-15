@@ -10,6 +10,7 @@ import { ApplicationStatusBadge, CallStatusBadge } from '../components/ui/Status
 import { Button, Card, EmptyState, ErrorState, linkButtonClass, LoadingState, Notice } from '../components/ui/ui'
 import { formatDateTime } from '../lib/format'
 import { CallTranscript } from './CallTranscript'
+import { EligibilityGate, EligibilityNote, FazeIdProfile } from './FazeIdProfile'
 import { canRequestCall, eventUnavailable, fanStatusText, normalizePhone } from './logic'
 import { placeProfileCall } from './placeCall'
 
@@ -40,8 +41,11 @@ export function FanLayout() {
       sidebar={
         <>
           <nav aria-label="Fan navigation" className="access-nav">
-            <NavLink to="/" end><Icon name="calendar" /> Events</NavLink>
-            <NavLink to="/profile"><Icon name="profile" /> My profile</NavLink>
+            <NavLink to="/players"><Icon name="players" /> Players</NavLink>
+            <NavLink to="/matches"><Icon name="trophy" /> Matches</NavLink>
+            <NavLink to="/" end><Icon name="calendar" /> Fan events</NavLink>
+            <NavLink to="/rewards"><Icon name="gift" /> Rewards</NavLink>
+            <NavLink to="/profile"><Icon name="profile" /> My FaZe ID</NavLink>
             {fixture && me.isSuccess && (
               <NavLink to="/profile/edit"><Icon name="arrowRight" /> Demo profile</NavLink>
             )}
@@ -86,13 +90,13 @@ export function FanEventPage() {
   if (event.isError) return <ErrorState error={event.error} onRetry={() => event.refetch()} />
   const current = apps.data?.find(app => app.event.id === id)
   const unavailable = eventUnavailable(event.data)
-  return <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]"><section className="space-y-5"><Link to="/" className="text-sm text-muted underline">Back to events</Link><h1 className={pageTitle}>{event.data.title}</h1><p className="text-lg text-muted">{event.data.description}</p><p>{formatDateTime(event.data.startsAt, event.data.timezone)}<br />{event.data.location}</p><p className="text-sm text-muted">Apply, chat with an AI host, and watch for your invitation. Staff make the final decision.</p></section>
-    <Card title={current ? 'Your application' : 'Apply for access'}>{me.isPending || (me.data?.role === 'fan' && apps.isPending) ? <LoadingState /> : me.isError ? <LoadError error={me.error} retry={() => me.refetch()} /> : apps.isError ? <ErrorState error={apps.error} onRetry={() => apps.refetch()} /> : me.data?.role === 'staff' ? <Notice>Sign in as a fan to apply.</Notice> : current ? <div className="space-y-4"><ApplicationStatusBadge status={current.status} /><p>{fanStatusText(current)}</p><Link to={`/applications/${current.id}`} className={linkButtonClass}>View application</Link></div> : unavailable ? <Notice tone="warn">{unavailable}</Notice> : <form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!apply.isPending) apply.mutate() }}>
+  return <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]"><section className="space-y-5"><Link to="/" className="text-sm text-muted underline">Back to events</Link><h1 className={pageTitle}>{event.data.title}</h1><p className="text-lg text-muted">{event.data.description}</p><p>{formatDateTime(event.data.startsAt, event.data.timezone)}<br />{event.data.location}</p><EligibilityNote event={event.data} /><p className="text-sm text-muted">Apply, chat with an AI host, and watch for your invitation. Staff make the final decision.</p></section>
+    <Card title={current ? 'Your application' : 'Apply for access'}>{me.isPending || (me.data?.role === 'fan' && apps.isPending) ? <LoadingState /> : me.isError ? <LoadError error={me.error} retry={() => me.refetch()} /> : apps.isError ? <ErrorState error={apps.error} onRetry={() => apps.refetch()} /> : me.data?.role === 'staff' ? <Notice>Sign in as a fan to apply.</Notice> : current ? <div className="space-y-4"><ApplicationStatusBadge status={current.status} /><p>{fanStatusText(current)}</p><Link to={`/applications/${current.id}`} className={linkButtonClass}>View application</Link></div> : unavailable ? <Notice tone="warn">{unavailable}</Notice> : <EligibilityGate event={event.data}><form className="space-y-5" onSubmit={submit => { submit.preventDefault(); if (!apply.isPending) apply.mutate() }}>
       {fixture && <Notice tone="warn">Use fictional details for this demo application.</Notice>}
       <dl className="space-y-3"><div><dt className="text-sm text-muted">Applicant</dt><dd>{me.data?.displayName || me.data?.email}</dd></div><div><dt className="text-sm text-muted">FaceTime destination</dt><dd>{me.data?.phone || 'No number on profile'}</dd></div></dl><ProfileSettingsLink className="text-sm underline" />
       <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 size-5 shrink-0" checked={consent} onChange={change => setConsent(change.target.checked)} disabled={apply.isPending} required /><span>I agree to receive an AI interview{fixture ? ' (simulated in this demo)' : ' over FaceTime'}. My answers will be transcribed for event-staff review.</span></label>
       {apply.isError && <ErrorState error={apply.error} />}<Button type="submit" variant="primary" disabled={apply.isPending || !me.data?.phone || !normalizePhone(me.data.phone)}>{apply.isPending ? 'Submitting…' : 'Submit application'}</Button>
-    </form>}</Card>
+    </form></EligibilityGate>}</Card>
   </div>
 }
 
@@ -141,7 +145,7 @@ export function FanProfilePage() {
   if (!fixture && me.data.role === 'fan' && !me.data.phone && params.get('setup') === '1') {
     return <Navigate to="/profile/edit" replace />
   }
-  return <div className="space-y-7"><h1 className={pageTitle}>Your community profile</h1><div className="grid gap-6 lg:grid-cols-[1fr_2fr]"><Card title={me.data.displayName || 'Community member'}><p className="break-all">{me.data.email}<br />{me.data.phone || 'No phone on profile'}</p><ProfileSettingsLink className={`${linkButtonClass} mt-4`} /></Card><div className="space-y-6"><Card title="Your applications">{apps.isPending ? <LoadingState /> : apps.isError ? <LoadError error={apps.error} retry={() => apps.refetch()} /> : !apps.data.length ? (me.data.role === 'staff' ? <EmptyState title="Staff account"><p className="mb-3">Staff accounts manage events and applications from the staff dashboard.</p><Link to="/admin" className={linkButtonClass}>Open staff dashboard</Link></EmptyState> : <EmptyState title="Your first night starts here"><Link to="/">Explore events</Link></EmptyState>) : <ul className="divide-y divide-border">{apps.data.map(app => <li key={app.id} className="space-y-3 py-4"><h2 className="font-semibold">{app.event.title}</h2><ApplicationStatusBadge status={app.status} /><div><Link to={`/applications/${app.id}`} className={linkButtonClass}>View application</Link></div></li>)}</ul>}</Card>
+  return <div className="space-y-7"><h1 className={pageTitle}>My FaZe ID</h1><div className="grid gap-6 lg:grid-cols-[1fr_2fr]"><Card title={me.data.displayName || 'Community member'}><p className="break-all">{me.data.email}<br />{me.data.phone || 'No phone on profile'}</p><ProfileSettingsLink className={`${linkButtonClass} mt-4`} /></Card><div className="space-y-6">{me.data.role === 'fan' && <FazeIdProfile />}<Card title="Your applications">{apps.isPending ? <LoadingState /> : apps.isError ? <LoadError error={apps.error} retry={() => apps.refetch()} /> : !apps.data.length ? (me.data.role === 'staff' ? <EmptyState title="Staff account"><p className="mb-3">Staff accounts manage events and applications from the staff dashboard.</p><Link to="/admin" className={linkButtonClass}>Open staff dashboard</Link></EmptyState> : <EmptyState title="Your first night starts here"><Link to="/">Explore events</Link></EmptyState>) : <ul className="divide-y divide-border">{apps.data.map(app => <li key={app.id} className="space-y-3 py-4"><h2 className="font-semibold">{app.event.title}</h2><ApplicationStatusBadge status={app.status} /><div><Link to={`/applications/${app.id}`} className={linkButtonClass}>View application</Link></div></li>)}</ul>}</Card>
       <Card title="Recorded activity">{activity.isPending ? <LoadingState /> : activity.isError ? <LoadError error={activity.error} retry={() => activity.refetch()} /> : !activity.data.length ? <EmptyState title="No activity recorded yet">New fans are welcome. Your activity appears as it is recorded.</EmptyState> : <ul className="divide-y divide-border">{activity.data.map(item => <li key={item.id} className="space-y-1 py-3"><p className="font-semibold">{{ application: 'Application submitted', invitation_accepted: 'Invitation accepted', attendance: 'Attendance confirmed' }[item.type]}</p><p>{item.eventTitle}</p><p className="text-sm text-muted">{formatDateTime(item.timestamp)} · {item.source}{item.isDemo ? ' · Demo record' : ''}</p></li>)}</ul>}</Card></div></div></div>
 }
 
