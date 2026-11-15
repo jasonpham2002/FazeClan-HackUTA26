@@ -4,4 +4,6 @@ window.FAZE_CONFIG = {
   apiBase: "/api",
   eventId: "community-night-demo",
   signInUrl: "/sign-in",
+  // Enable only after Jason implements the endpoints in API-HANDOFF.md.
+  features: { applicationHistory: false, activityHistory: false },
 };

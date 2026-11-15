@@ -1,6 +1,7 @@
 import { createDemoApi, createLiveApi } from './api.mjs';
 import { normalizePhone, validateDraft, applicationAvailability, invitationAvailability, callEligibility, statusContent, shouldPoll, friendlyError } from './model.mjs';
 import { scenarioLabels } from './fixtures.mjs';
+import { profileView } from './profile.mjs';
 
 const config = window.FAZE_CONFIG;
 if (!['demo', 'live'].includes(config?.mode)) throw new Error('Invalid FAZE_CONFIG mode.');
@@ -10,6 +11,9 @@ const root = document.querySelector('#app');
 let event, application, user, busy = false, error = '', notice = '', poll, generation = 0;
 let draft = { name: '', email: '', phone: '', consentAccepted: false };
 let fieldErrors = {}, destinationConfirmed = false, scenario = 'fresh', controlsOpen = false, pollingPaused = false;
+const emptyHistory = () => ({ applications: { state: 'idle', items: [], nextCursor: null }, activity: { state: 'idle', items: [], nextCursor: null } });
+let history = emptyHistory(), historyEpoch = 0;
+function resetHistory() { history = emptyHistory(); historyEpoch++; }
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const button = (text, action, secondary = false, disabled = false) => `<button type="button" class="button ${secondary ? 'secondary' : ''}" data-action="${action}" ${busy || disabled ? 'disabled' : ''}>${text}</button>`;
 const announce = message => { document.querySelector('#announcement').textContent = message; };
@@ -25,10 +29,38 @@ function render() {
     return;
   }
   const onApplication = location.hash === '#application';
+  const onProfile = location.hash === '#profile';
+  document.querySelectorAll('nav a').forEach(link => {
+    if (link.hash === (onApplication ? '#application' : onProfile ? '#profile' : '#event')) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+  const body = onProfile ? user ? profileView({ user, currentApplication: application, event, history, isDemo, signInUrl: config.signInUrl }) : signInView() : onApplication ? applicationView() : eventView();
   const summary = Object.keys(fieldErrors).length ? 'Please check the highlighted fields.' : error;
-  root.innerHTML = `${summary ? `<div class="error" id="error-summary" role="alert" tabindex="-1">${escape(summary)}${Object.keys(fieldErrors).length ? `<ul>${Object.entries(fieldErrors).map(([name, text]) => `<li><a href="#field-${name}" data-focus="field-${name}">${escape(text)}</a></li>`).join('')}</ul>` : ''}</div>` : ''}${notice ? `<div class="notice" role="status">${escape(notice)}</div>` : ''}${onApplication ? applicationView() : eventView()}${isDemo ? demoControls() : ''}`;
+  root.innerHTML = `${summary ? `<div class="error" id="error-summary" role="alert" tabindex="-1">${escape(summary)}${Object.keys(fieldErrors).length ? `<ul>${Object.entries(fieldErrors).map(([name, text]) => `<li><a href="#field-${name}" data-focus="field-${name}">${escape(text)}</a></li>`).join('')}</ul>` : ''}</div>` : ''}${notice ? `<div class="notice" role="status">${escape(notice)}</div>` : ''}${body}${isDemo ? demoControls() : ''}`;
   if (busy) root.querySelectorAll('input, select').forEach(input => { input.disabled = true; });
   schedulePoll(onApplication);
+  if (onProfile && user && !busy) {
+    for (const kind of ['applications', 'activity']) if (history[kind].state === 'idle') queueMicrotask(() => loadHistory(kind));
+  }
+}
+
+async function loadHistory(kind) {
+  if (!user || !['applications', 'activity'].includes(kind) || history[kind].state === 'loading') return;
+  const epoch = historyEpoch;
+  const section = history[kind];
+  const cursor = section.nextCursor;
+  section.state = 'loading'; section.error = ''; render();
+  try {
+    const page = kind === 'applications' ? await api.getApplications({ cursor }) : await api.getActivity({ cursor });
+    if (epoch !== historyEpoch) return;
+    const combined = cursor ? [...section.items, ...page.items] : page.items;
+    history[kind] = { state: 'loaded', items: [...new Map(combined.map(item => [item.id, item])).values()], available: page.available, nextCursor: page.nextCursor };
+  } catch (failure) {
+    if (epoch !== historyEpoch) return;
+    if (failure.status === 401) { user = null; application = null; resetHistory(); }
+    else { section.state = 'error'; section.error = friendlyError(failure); }
+  }
+  if (location.hash === '#profile') render();
 }
 
 function schedulePoll(onApplication) {
@@ -40,11 +72,11 @@ function schedulePoll(onApplication) {
       if (currentGeneration !== generation || busy) return;
       const changed = JSON.stringify(application) !== JSON.stringify(updated);
       application = updated;
-      if (changed) { render(); announce(application ? statusContent(application).text : 'Application no longer available.'); }
+      if (changed) { resetHistory(); render(); announce(application ? statusContent(application).text : 'Application no longer available.'); }
       else schedulePoll(true);
     } catch (failure) {
       if (currentGeneration !== generation) return;
-      if (failure.status === 401) user = null;
+      if (failure.status === 401) { user = null; application = null; resetHistory(); }
       error = `${friendlyError(failure)} Automatic updates paused; use Refresh status to try again.`;
       pollingPaused = true; render();
     }
@@ -95,8 +127,9 @@ async function run(operation) {
   try { await operation(); }
   catch (failure) {
     error = friendlyError(failure);
-    if (failure.status === 401) user = null;
+    if (failure.status === 401) { user = null; application = null; resetHistory(); }
   } finally {
+    resetHistory();
     busy = false; render();
     announce(error || notice || 'Application updated.');
     const target = document.querySelector('#error-summary') || root;
@@ -118,7 +151,7 @@ root.addEventListener('change', change => {
   }
   if (change.target.id === 'scenario' && isDemo) {
     scenario = change.target.value;
-    run(async () => { await api.setScenario(scenario); await readState(); destinationConfirmed = false; pollingPaused = false; location.hash = '#application'; });
+    run(async () => { await api.setScenario(scenario); resetHistory(); await readState(); destinationConfirmed = false; pollingPaused = false; location.hash = scenario === 'returning_fan' ? '#profile' : '#application'; });
   }
 });
 root.addEventListener('toggle', toggle => { if (toggle.target.matches('.demo-controls')) controlsOpen = toggle.target.open; }, true);
@@ -128,7 +161,7 @@ root.addEventListener('submit', submit => {
   if (busy) return;
   fieldErrors = validateDraft(draft, isDemo);
   if (Object.keys(fieldErrors).length) { render(); root.querySelector('#error-summary').focus(); return; }
-  run(async () => { application = await api.apply(draft); destinationConfirmed = false; });
+  run(async () => { application = await api.apply(draft); if (isDemo) user = await api.getMe(); destinationConfirmed = false; });
 });
 root.addEventListener('click', async click => {
   const focusTarget = click.target.closest('[data-focus]')?.dataset.focus;
@@ -136,6 +169,7 @@ root.addEventListener('click', async click => {
   const action = click.target.closest('[data-action]')?.dataset.action;
   if (!action || busy) return;
   if (action === 'load') { load(); return; }
+  if (action.startsWith('history:')) { loadHistory(action.slice(8)); return; }
   if (action.startsWith('fail:') && isDemo) {
     api.failNext(action.slice(5)); notice = 'The next submit, call request, or acceptance will fail once. Refresh does not consume this demo error.'; render(); announce(notice); return;
   }
@@ -158,7 +192,10 @@ window.addEventListener('pagehide', () => { generation++; clearTimeout(poll); })
 document.addEventListener('visibilitychange', () => { generation++; clearTimeout(poll); if (!document.hidden) schedulePoll(location.hash === '#application'); });
 
 async function readState() {
-  event = await api.getEvent(); user = await api.getMe();
+  event = await api.getEvent();
+  const nextUser = await api.getMe();
+  if (nextUser?.id !== user?.id) resetHistory();
+  user = nextUser;
   application = user ? await api.getApplication() : null;
 }
 async function load() {

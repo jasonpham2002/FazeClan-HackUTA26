@@ -564,6 +564,69 @@
         "status": "accepted",
         "call": null
       }
+    },
+    "returning_fan": {
+      "event": {
+        "id": "community-night-demo",
+        "title": "Off the screen.\nInto the community.",
+        "name": "FaZe Community Night",
+        "category": "COMMUNITY / IRL",
+        "description": "Meet other fans, make some memories, and be part of a night built around the community. Apply for a spot and tell the AI host what brings you here.",
+        "dateLabel": "Date to be announced",
+        "location": "Arlington, TX · Illustrative venue",
+        "capacity": 120,
+        "status": "open",
+        "durationMinutes": 3
+      },
+      "user": {
+        "id": "user_demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        }
+      },
+      "application": {
+        "id": "app_demo",
+        "eventId": "community-night-demo",
+        "profile": {
+          "name": "Demo Fan",
+          "email": "fan@example.com",
+          "phone": "+12025550123",
+          "consentAccepted": true
+        },
+        "status": "interview_pending",
+        "call": null
+      },
+      "applications": [
+        {
+          "id": "app_past_demo",
+          "eventId": "past-event-demo",
+          "eventName": "Community Meet-up · Demo",
+          "status": "accepted",
+          "submittedAt": "2026-10-10T18:00:00Z",
+          "synthetic": true
+        }
+      ],
+      "activity": [
+        {
+          "id": "activity_attendance_demo",
+          "type": "attendance_confirmed",
+          "eventName": "Community Meet-up · Demo",
+          "timestamp": "2026-10-17T20:00:00Z",
+          "source": "demo_check_in",
+          "synthetic": true
+        },
+        {
+          "id": "activity_acceptance_demo",
+          "type": "invitation_accepted",
+          "eventName": "Community Meet-up · Demo",
+          "timestamp": "2026-10-12T18:00:00Z",
+          "source": "demo_platform",
+          "synthetic": true
+        }
+      ]
     }
   },
   "errors": {

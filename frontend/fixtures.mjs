@@ -12,6 +12,13 @@ const user = { id: 'user_demo', profile: demoProfile };
 const baseApplication = { id: 'app_demo', eventId: demoEvent.id, profile: demoProfile, status: 'interview_pending', call: null };
 const base = { event: demoEvent, user, application: null };
 const withApplication = (status, call = null, extra = {}) => ({ ...base, application: { ...baseApplication, status, call, ...extra } });
+export const pastApplications = [
+  { id: 'app_past_demo', eventId: 'past-event-demo', eventName: 'Community Meet-up · Demo', status: 'accepted', submittedAt: '2026-10-10T18:00:00Z', synthetic: true },
+];
+export const pastActivity = [
+  { id: 'activity_attendance_demo', type: 'attendance_confirmed', eventName: 'Community Meet-up · Demo', timestamp: '2026-10-17T20:00:00Z', source: 'demo_check_in', synthetic: true },
+  { id: 'activity_acceptance_demo', type: 'invitation_accepted', eventName: 'Community Meet-up · Demo', timestamp: '2026-10-12T18:00:00Z', source: 'demo_platform', synthetic: true },
+];
 export const scenarios = {
   fresh: { ...base },
   signed_out: { ...base, user: null },
@@ -30,6 +37,7 @@ export const scenarios = {
   capacity_claimed: withApplication('invited', null, { invitation: { expiresAt: null, capacityAvailable: false } }),
   waitlisted: withApplication('waitlisted'),
   accepted: withApplication('accepted'),
+  returning_fan: { ...withApplication('interview_pending'), applications: pastApplications, activity: pastActivity },
 };
 
 export const scenarioLabels = {
@@ -38,4 +46,5 @@ export const scenarioLabels = {
   missed: 'Missed call', processing: 'Processing interview', processing_failed: 'Processing failed',
   review: 'Awaiting staff review', invited: 'Invited', expired: 'Invitation expired',
   capacity_claimed: 'Invitation capacity claimed', waitlisted: 'Waitlisted', accepted: 'Accepted',
+  returning_fan: 'Returning fan with demo history',
 };

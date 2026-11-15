@@ -75,10 +75,47 @@ Responses are direct objects rather than `{data: ...}` envelopes. Tell Johnny if
 8. Invite/Waitlist comes from Khoi's authenticated staff UI via the backend. Fan pages cannot issue staff decisions.
 9. Accept invitation only when active, unexpired, and capacity available; handle HTTP 409 if state changed.
 
-Account-wide application discovery on a new device/tab is not implemented. Coordinate a future `GET /me/applications` endpoint if needed; session storage is only a convenience, never authorization.
+Account-wide discovery is implemented behind the optional `applicationHistory` flag. Enable it only after the filtered applications endpoint below is ready. Session storage remains a convenience, never authorization.
 
 ## Fixtures and checks
 
-`fixtures.json` contains `scenarios` (event, user, application response triples) and HTTP `errors`. It includes 17 states plus examples for 401, 403, 409, and 429. Use these to compare actual backend output. `fixtures.mjs` is the source; regenerate JSON after editing it.
+`fixtures.json` contains `scenarios` (event, user, application response triples) and HTTP `errors`. It includes 18 states plus examples for 401, 403, 409, and 429. Use these to compare actual backend output. `fixtures.mjs` is the source; regenerate JSON after editing it.
 
 Johnny's checks cover pure state transitions and mocked live browser requests. Real authentication, API persistence, concurrent capacity handling, and phone calls still need integration testing with the actual services.
+
+## Optional profile/history endpoints
+
+Default public configuration:
+
+```js
+features: { applicationHistory: false, activityHistory: false }
+```
+
+The frontend does not request these endpoints until the corresponding feature is enabled. In the meantime the profile shows its known current application and an unavailable-history message, not invented history.
+
+| Endpoint | Purpose | JSON response |
+|---|---|---|
+| GET /api/me/applications | First page of current user's applications, newest first | `{items:[ApplicationSummary],nextCursor:null}` |
+| GET /api/me/applications?eventId=... | Discover application for current configured event on a new tab/device | Same envelope; at most one record because user/event is unique |
+| GET /api/me/applications?cursor=... | Subsequent page, opaque cursor | Same envelope |
+| GET /api/me/activity | First page of current user's recorded activity, newest first | `{items:[Activity],nextCursor:null}` |
+| GET /api/me/activity?cursor=... | Subsequent activity page | Same envelope |
+
+ApplicationSummary fields: `id`, `eventId`, `eventName`, `status`, `submittedAt` (ISO timestamp). For current-event discovery, the frontend uses the ID to fetch full details at `/applications/:id` before displaying call controls. It ignores records for other event IDs. Pagination deduplicates by record ID.
+
+Activity example:
+
+```json
+{
+  "id": "activity_123",
+  "type": "invitation_accepted",
+  "eventName": "Community Night",
+  "timestamp": "2026-11-14T18:00:00Z",
+  "source": "platform",
+  "synthetic": false
+}
+```
+
+Recognized activity types: `application_submitted`, `call_requested`, `interview_completed`, `invitation_issued`, `invitation_accepted`, `attendance_confirmed`. Unknown types display a neutral Activity recorded label. Use `attendance_confirmed` only from explicit check-in evidence, not inferred from acceptance. Demo records have `synthetic:true`; production records should never silently inherit seeded history.
+
+Each collection item requires a string `id`; `nextCursor` is an opaque string or null. Enforce current-user ownership server-side; never accept another user's ID as a history filter. History sections fail independently, retain previous pages on errors, and offer retry. An auth failure clears profile data and shows sign-in.

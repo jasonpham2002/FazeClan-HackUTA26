@@ -33,3 +33,7 @@ Run from the repository root:
     python frontend/serve.py
 
 Open http://127.0.0.1:5187. Default mode is an explicitly labeled in-memory simulation, not a real account or phone call. See [frontend setup and backend handoff](frontend/README.md). Johnny and Khoi build the platform; Jason owns its backend. Minh and Tuong build the AI call feature.
+
+## Fan profile and history
+
+The fan frontend now includes My profile, application history, sourced activity, and a labeled returning-fan demo. Optional live history endpoints remain disabled until Jason implements them; see [the API handoff](frontend/API-HANDOFF.md). With application history enabled, the client can discover an existing application after signing in on a new tab. New fans start with empty history.
