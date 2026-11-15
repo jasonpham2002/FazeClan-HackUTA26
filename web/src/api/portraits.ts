@@ -7,11 +7,14 @@
  * for the hackathon demo at the team's request. Replace with approved assets
  * (with their credit) when available. An image from the API always wins; a
  * missing file falls back to the silhouette.
+ *
+ * The files live under /portraits/, not /players/, because the deployed proxy sends
+ * every /players/* request to the API.
  */
 const PORTRAITS: Record<string, { url: string; credit: string }> = Object.fromEntries(
   ['frozen', 'twistzz', 'neityu', 'jcobbb', 'jboen'].map(handle => [
     handle,
-    { url: `/players/private/player_${handle}.png`, credit: 'HLTV.org' },
+    { url: `/portraits/player_${handle}.png`, credit: 'HLTV.org' },
   ]),
 )
 
