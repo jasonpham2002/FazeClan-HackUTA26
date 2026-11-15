@@ -30,11 +30,13 @@ async function code(run: Promise<unknown>): Promise<string> {
 const SOURCE = 'https://example.test/result'
 
 describe('players (placeholder data)', () => {
-  it('lists the five named starters with nothing invented about them', async () => {
+  it('lists the five named starters with their roles and flags sample content', async () => {
     const { api } = setup()
     const players = await api.listPlayers()
-    expect(players.map((player) => player.handle)).toEqual(['frozen', 'Twistzz', 'Neityu', 'jcobbb', 'JBOEN'])
-    expect(players.every((player) => player.role === null && player.sourceUrl === null)).toBe(true)
+    expect(players.map(({ handle, role }) => [handle, role])).toEqual([
+      ['frozen', 'Rifler'], ['Twistzz', 'In-game leader'], ['Neityu', 'Rifler'], ['jcobbb', 'Rifler'], ['JBOEN', 'AWPer'],
+    ])
+    expect(players.every(player => player.sourceUrl === null)).toBe(true)
     // Demo numbers and highlights exist for the pitch, but are always flagged as demo data.
     expect((await api.getPlayerStats('player_twistzz')).isDemo).toBe(true)
     expect((await api.getPlayerHighlights('player_twistzz')).isDemo).toBe(true)

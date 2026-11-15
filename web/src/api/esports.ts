@@ -1,5 +1,13 @@
 import type { Player, PlayerStats } from './types'
 
+export const fazeStarters = [
+  { id: 'hltv-9960', handle: 'frozen', role: 'Rifler' },
+  { id: 'hltv-10394', handle: 'Twistzz', role: 'In-game leader' },
+  { id: 'hltv-21972', handle: 'Neityu', role: 'Rifler' },
+  { id: 'hltv-22383', handle: 'jcobbb', role: 'Rifler' },
+  { id: 'hltv-22866', handle: 'JBOEN', role: 'AWPer' },
+] as const
+
 interface Evidence {
   id: string
   url: string
@@ -34,9 +42,11 @@ export interface StatsDto {
 /** Map the sourced backend records; missing evidence is never replaced with demo data. */
 export function playerRecord(row: PlayerDto): Player {
   const profile = 'profile' in row ? row.profile : row
+  // shortcut: November 2026 starter roles cover older imports, drop the fallback once the API supplies them.
+  const starter = profile.rosterStatus === 'active' ? fazeStarters.find(player => player.id === profile.id) : undefined
   return {
     id: profile.id, handle: profile.handle, displayName: profile.displayName,
-    role: profile.role, rosterStatus: profile.rosterStatus, team: 'FaZe',
+    role: profile.role ?? starter?.role ?? null, rosterStatus: profile.rosterStatus, team: 'FaZe',
     imageUrl: null, imageCredit: null, sourceUrl: profile.rosterSource.url,
     checkedAt: row.checkedAt, isDemo: false,
   }
