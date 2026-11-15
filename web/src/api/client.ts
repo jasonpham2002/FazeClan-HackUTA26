@@ -1,0 +1,57 @@
+import type {
+  Analytics,
+  ApplicationDetail,
+  ApplicationListItem,
+  ApplicationListQuery,
+  DecisionInput,
+  EventInput,
+  EventRecord,
+  InterviewConfig,
+  InterviewState,
+  Me,
+  Page,
+} from './types'
+
+export class ApiError extends Error {
+  status: number
+  code: string
+
+  constructor(status: number, code: string, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
+/**
+ * One method per backend endpoint. Mutations resolve with no value on purpose:
+ * screens refetch the affected resource afterwards, so what staff see as
+ * "saved" is always what the backend returned on a fresh read.
+ */
+export interface ApiClient {
+  /** GET /me */
+  getMe(): Promise<Me>
+  /** CONFIRM (Jason): GET /admin/events — not in the documented endpoint list. */
+  listAdminEvents(): Promise<EventRecord[]>
+  /** CONFIRM (Jason): GET /admin/events/:id — not in the documented endpoint list. */
+  getAdminEvent(id: string): Promise<EventRecord>
+  /** POST /admin/events */
+  createEvent(input: EventInput): Promise<EventRecord>
+  /** PATCH /admin/events/:id */
+  updateEvent(id: string, input: EventInput): Promise<void>
+  /** GET /admin/events/:id/interview */
+  getInterview(eventId: string): Promise<InterviewState>
+  /** PUT /admin/events/:id/interview-draft */
+  saveInterviewDraft(eventId: string, config: InterviewConfig): Promise<void>
+  /** POST /admin/events/:id/interview-publish */
+  publishInterview(eventId: string): Promise<void>
+  /** GET /admin/applications */
+  listApplications(query: ApplicationListQuery): Promise<Page<ApplicationListItem>>
+  /** GET /admin/applications/:id */
+  getApplication(id: string): Promise<ApplicationDetail>
+  /** POST /admin/applications/:id/decision */
+  postDecision(id: string, input: DecisionInput): Promise<void>
+  /** GET /admin/events/:id/analytics */
+  getAnalytics(eventId: string): Promise<Analytics>
+}
